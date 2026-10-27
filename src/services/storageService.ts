@@ -34,23 +34,42 @@ import {
   INITIAL_INSCRIPTION_SUBMISSIONS,
 } from '../data/mockData';
 
+// Immediate one-time purge of recently loaded data as requested
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    if (localStorage.getItem('cma_pe_clean_v6_done') !== 'true') {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('cma_pe_') && !k.includes('clean_v6')) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem('cma_pe_clean_v6_done', 'true');
+    }
+  } catch (e) {
+    console.warn('Storage purge error:', e);
+  }
+}
+
 const STORAGE_KEYS = {
-  DOCUMENTS: 'cma_pe_documents_v5_prod',
-  KIDS: 'cma_pe_kids_v5_prod',
-  INVENTORY: 'cma_pe_inventory_v5_prod',
-  LOANS: 'cma_pe_loans_v5_prod',
-  REQUESTS: 'cma_pe_requests_v5_prod',
-  BUDGET: 'cma_pe_budget_v5_prod',
-  EVENTS: 'cma_pe_events_v5_prod',
-  USERS: 'cma_pe_users_v5_prod',
-  ACTIVE_SESSION: 'cma_pe_session_v5_prod',
-  AUDIT_LOGS: 'cma_pe_audit_v5_prod',
-  SHELVES: 'cma_pe_shelves_v5_prod',
-  INST_INVENTORY: 'cma_pe_inst_inventory_v5_prod',
-  AREA_ACTAS: 'cma_pe_area_actas_v5_prod',
-  NOTICES: 'cma_pe_notices_v5_prod',
-  INSCRIPTION_FORMS: 'cma_pe_insc_forms_v5_prod',
-  INSCRIPTION_SUBS: 'cma_pe_insc_subs_v5_prod',
+  DOCUMENTS: 'cma_pe_documents_v6_clean',
+  KIDS: 'cma_pe_kids_v6_clean',
+  INVENTORY: 'cma_pe_inventory_v6_clean',
+  LOANS: 'cma_pe_loans_v6_clean',
+  REQUESTS: 'cma_pe_requests_v6_clean',
+  BUDGET: 'cma_pe_budget_v6_clean',
+  EVENTS: 'cma_pe_events_v6_clean',
+  USERS: 'cma_pe_users_v6_clean',
+  ACTIVE_SESSION: 'cma_pe_session_v6_clean',
+  AUDIT_LOGS: 'cma_pe_audit_v6_clean',
+  SHELVES: 'cma_pe_shelves_v6_clean',
+  INST_INVENTORY: 'cma_pe_inst_inventory_v6_clean',
+  AREA_ACTAS: 'cma_pe_area_actas_v6_clean',
+  NOTICES: 'cma_pe_notices_v6_clean',
+  INSCRIPTION_FORMS: 'cma_pe_insc_forms_v6_clean',
+  INSCRIPTION_SUBS: 'cma_pe_insc_subs_v6_clean',
 };
 
 export interface AuditLogEntry {
@@ -248,15 +267,36 @@ export class StorageService {
     const loans = [loan, ...this.getLoans()];
     this.setItem(STORAGE_KEYS.LOANS, loans);
 
-    const inventory = this.getInventory().map((inv) => {
-      if (inv.id === loan.itemId) {
-        return {
-          ...inv,
-          stockDisponible: Math.max(0, inv.stockDisponible - loan.cantidad),
-        };
-      }
-      return inv;
-    });
+    const currentInventory = this.getInventory();
+    const existingIndex = currentInventory.findIndex((inv) => inv.id === loan.itemId);
+    let inventory: InventoryItem[];
+
+    if (existingIndex >= 0) {
+      inventory = currentInventory.map((inv) => {
+        if (inv.id === loan.itemId) {
+          return {
+            ...inv,
+            stockDisponible: Math.max(0, inv.stockDisponible - loan.cantidad),
+          };
+        }
+        return inv;
+      });
+    } else {
+      // Auto-create item entry in inventory for the borrowed material
+      const newItem: InventoryItem = {
+        id: loan.itemId || ('item-' + Date.now()),
+        codigo: `INV-${loan.areaOperativa.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`,
+        nombre: loan.itemNombre,
+        categoria: 'Materiales y Equipos',
+        areaOperativa: loan.areaOperativa,
+        stockTotal: loan.cantidad,
+        stockDisponible: 0,
+        estanteUbicacion: 'Depósito Operativo',
+        estadoConservacion: 'Bueno',
+        observaciones: `Registrado en préstamo por ${loan.solicitanteNombre}`,
+      };
+      inventory = [newItem, ...currentInventory];
+    }
     this.setItem(STORAGE_KEYS.INVENTORY, inventory);
 
     this.addAuditLog(user, 'Préstamo con Firma', `Item ${loan.itemNombre} (cant: ${loan.cantidad}) retirado por ${loan.solicitanteNombre}`);

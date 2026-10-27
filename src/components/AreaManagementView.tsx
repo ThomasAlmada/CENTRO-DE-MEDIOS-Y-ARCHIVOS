@@ -23,7 +23,9 @@ import {
   Eye, 
   AlertCircle,
   FileCheck2,
-  FolderOpen
+  FolderOpen,
+  Printer,
+  X
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -75,6 +77,7 @@ export const AreaManagementView: React.FC<AreaManagementViewProps> = ({
   const [actaParticipantes, setActaParticipantes] = useState('');
   const [actaAcuerdos, setActaAcuerdos] = useState('');
   const [actaFotoUrl, setActaFotoUrl] = useState<string | null>(null);
+  const [viewingActa, setViewingActa] = useState<AreaActa | null>(null);
 
   // Form states for making a Request (Pedido)
   const [isCreatingRequest, setIsCreatingRequest] = useState(false);
@@ -132,13 +135,38 @@ export const AreaManagementView: React.FC<AreaManagementViewProps> = ({
 
     const updated = StorageService.saveAreaActa(newActa, currentUser);
     setActas(updated);
+
+    // Also register as an official Archive Document under folio "Actas y reuniones"
+    const newDoc: ArchiveDocument = {
+      id: 'doc-acta-' + Date.now(),
+      codigoFolio: newActa.codigo,
+      titulo: newActa.titulo,
+      areaOperativa: selectedArea,
+      tipoAdministrativo: 'ACTAS Y REUNIONES',
+      subtipoDetalle: 'Actas de reuniones de comisión / equipo',
+      anio: new Date().getFullYear(),
+      estanteFisico: 'Estante 1 - Balda A',
+      folioNombre: 'Actas y reuniones',
+      fecha: newActa.fecha,
+      autor: currentUser.name,
+      descripcion: `Sesión de ${selectedArea}. Lugar: ${newActa.lugar}. Temario: ${newActa.temarioOrdenDelDia || 'Tratamiento de temas operativos'}. Resoluciones: ${newActa.acuerdosYResoluciones || 'Acuerdos tomados en sesión'}.`,
+      soporteFisico: 'Original Manuscrito',
+      visibilidad: 'Uso Interno',
+      etiquetas: ['Acta', selectedArea, 'Reunión'],
+      fotoUrl: newActa.adjuntoFotoUrl,
+      creadoEn: new Date().toISOString(),
+    };
+    const updatedDocs = StorageService.saveDocument(newDoc, currentUser);
+    setDocuments(updatedDocs);
+
     setIsCreatingActa(false);
     setActaTitulo('');
     setActaTemario('');
     setActaParticipantes('');
     setActaAcuerdos('');
     setActaFotoUrl(null);
-    showNotification('success', `Acta "${newActa.codigo}" registrada correctamente para ${selectedArea}`);
+    setViewingActa(newActa);
+    showNotification('success', `✓ Acta "${newActa.codigo}" creada y archivada. Visualizando acta oficial.`);
   };
 
   const handleDeleteActa = (actaId: string) => {
@@ -578,6 +606,17 @@ export const AreaManagementView: React.FC<AreaManagementViewProps> = ({
                       ))}
                     </div>
                   )}
+
+                  <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-[11px] text-gray-400 font-mono">Folio: Actas y reuniones • Estante 1</span>
+                    <button
+                      onClick={() => setViewingActa(acta)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0D472C] text-white text-xs font-bold hover:bg-[#165B3A] transition shadow-xs cursor-pointer"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>Ver Acta Completa</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -956,6 +995,149 @@ export const AreaManagementView: React.FC<AreaManagementViewProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {/* VIEWING ACTA DETAIL MODAL */}
+      {viewingActa && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-3xl bg-[#FFFDF8] border-2 border-[#0D472C] shadow-2xl p-6 sm:p-8 my-8 space-y-5 animate-in fade-in">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b-2 border-[#0D472C]/20 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-[#0D472C] text-white flex items-center justify-center shrink-0 shadow-md">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase bg-[#E8F3ED] text-[#0D472C] px-2.5 py-0.5 rounded border border-[#0D472C]/20">
+                    {viewingActa.codigo}
+                  </span>
+                  <h3 className="font-archival text-lg sm:text-xl font-black text-gray-950 mt-1 leading-tight">
+                    {viewingActa.titulo}
+                  </h3>
+                  <span className="text-xs text-[#0D472C] font-bold">
+                    Área: {viewingActa.areaOperativa}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingActa(null)}
+                className="text-gray-400 hover:text-black p-1.5 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Metadata Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-[#FAF7F0] p-3.5 rounded-2xl border border-gray-200 text-xs text-gray-700">
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase block">Fecha</span>
+                <span className="font-bold font-mono">📅 {viewingActa.fecha}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase block">Horario</span>
+                <span className="font-bold">⏰ {viewingActa.horaInicio} hs</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase block">Lugar</span>
+                <span className="font-bold truncate block">📍 {viewingActa.lugar}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-gray-400 font-bold uppercase block">Redactada Por</span>
+                <span className="font-bold text-[#0D472C] truncate block">✍️ {viewingActa.redactadaPor}</span>
+              </div>
+            </div>
+
+            {/* Orden del día */}
+            {viewingActa.temarioOrdenDelDia && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[#0D472C]" />
+                  Orden del Día / Temario
+                </h4>
+                <div className="bg-white p-3.5 rounded-2xl border border-gray-200 text-xs text-gray-800 whitespace-pre-line leading-relaxed">
+                  {viewingActa.temarioOrdenDelDia}
+                </div>
+              </div>
+            )}
+
+            {/* Acuerdos y Resoluciones */}
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-bold text-[#0D472C] uppercase tracking-wider flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-[#0D472C]" />
+                Acuerdos, Decisiones y Resoluciones Tomadas
+              </h4>
+              <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-300 text-xs text-emerald-950 font-medium whitespace-pre-line leading-relaxed shadow-xs">
+                {viewingActa.acuerdosYResoluciones || 'Sin resoluciones asentadas.'}
+              </div>
+            </div>
+
+            {/* Participantes Presentes */}
+            {viewingActa.participantesPresentes.length > 0 && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Participantes y Asistencia Registrada ({viewingActa.participantesPresentes.length})
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {viewingActa.participantesPresentes.map((p, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-gray-100 text-gray-800 px-3 py-1 rounded-xl text-xs font-semibold border border-gray-200"
+                    >
+                      ✓ {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Attached Photo if exists */}
+            {viewingActa.adjuntoFotoUrl && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Documento / Acta Física Escaneada
+                </h4>
+                <div className="rounded-2xl overflow-hidden border border-gray-200 max-h-64 bg-gray-50 flex items-center justify-center">
+                  <img
+                    src={viewingActa.adjuntoFotoUrl}
+                    alt="Acta Física"
+                    className="max-h-64 w-auto object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Official Certification Footer */}
+            <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-gray-600">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-[#0D472C] shrink-0" />
+                <span>
+                  Asentada en el libro de actas oficial • <strong>Centro de Medios y Archivos</strong> Puerto Esperanza
+                </span>
+              </div>
+              <span className="font-mono text-[10px] text-gray-500">
+                Folio: Actas y reuniones • Estante 1
+              </span>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-100 text-xs font-semibold cursor-pointer"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Imprimir Acta</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingActa(null)}
+                className="px-6 py-2 rounded-xl bg-[#0D472C] hover:bg-[#165B3A] text-white text-xs font-bold shadow-md transition cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

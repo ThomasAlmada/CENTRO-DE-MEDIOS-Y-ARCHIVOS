@@ -154,7 +154,27 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
       {/* VIEW A: STOCK TABLE & CARDS */}
       {activeTab === 'stock' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        filteredStock.length === 0 ? (
+          <div className="rounded-3xl border-2 border-dashed border-[#0D472C]/30 bg-white p-10 text-center space-y-3">
+            <Package className="h-12 w-12 text-[#0D472C]/40 mx-auto" />
+            <h3 className="font-archival text-base font-bold text-gray-800">
+              No hay materiales registrados en inventario aún
+            </h3>
+            <p className="text-xs text-gray-500 max-w-md mx-auto">
+              Puedes solicitar o retirar cualquier material para tu área completando el acta de préstamo con firma digital.
+            </p>
+            <div className="pt-2">
+              <button
+                onClick={onOpenNewLoan}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0D472C] px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-[#165B3A] transition cursor-pointer"
+              >
+                <PenTool className="h-4 w-4" />
+                <span>Pedir Préstamo de Material con Firma Digital</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredStock.map((item) => {
             const isLowStock = item.stockDisponible === 0;
 
@@ -234,6 +254,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             );
           })}
         </div>
+        )
       )}
 
       {/* VIEW B: ACTAS DE PRÉSTAMOS CON FIRMA DIGITAL */}
