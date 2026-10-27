@@ -74,7 +74,7 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
       const currentYear = new Date().getFullYear();
       setAnio(currentYear);
       setCodigoFolio(StorageService.generateFolioCode(assigned, 'INFORME', currentYear));
-      setEstanteFisico('');
+      setEstanteFisico('Estante 1 - Balda A');
       setTitulo('');
       setAutor(currentUser.name);
       setDescripcion('');
@@ -116,41 +116,23 @@ export const DocumentModal: React.FC<DocumentModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // STRICT VALIDATION
-    if (!areaOperativa) {
-      setErrorMsg('OBLIGATORIO: Debe seleccionar el Área Operativa.');
-      return;
-    }
-    if (!tipoAdministrativo) {
-      setErrorMsg('OBLIGATORIO: Debe seleccionar el Tipo Administrativo.');
-      return;
-    }
-    if (!anio || anio < 1990 || anio > 2040) {
-      setErrorMsg('OBLIGATORIO: Indique un Año válido.');
-      return;
-    }
-    if (!codigoFolio.trim()) {
-      setErrorMsg('OBLIGATORIO: El código de Folio Físico es mandatorio.');
-      return;
-    }
-    if (!estanteFisico.trim()) {
-      setErrorMsg('OBLIGATORIO: Debe especificar el Estante Físico (ej: Estante A - Balda 1 - Caja 04).');
-      return;
-    }
     if (!titulo.trim()) {
       setErrorMsg('Por favor ingrese el título del documento.');
       return;
     }
 
+    const finalEstante = estanteFisico.trim() || 'Estante 1 - Balda A';
+    const finalCodigo = codigoFolio.trim() || StorageService.generateFolioCode(areaOperativa, tipoAdministrativo, anio);
+
     const doc: ArchiveDocument = {
       id: initialDoc ? initialDoc.id : 'doc-' + Date.now(),
-      codigoFolio: codigoFolio.trim().toUpperCase(),
+      codigoFolio: finalCodigo.toUpperCase(),
       titulo: titulo.trim(),
       areaOperativa,
       tipoAdministrativo,
       subtipoDetalle,
       anio,
-      estanteFisico: estanteFisico.trim(),
+      estanteFisico: finalEstante,
       fecha: initialDoc ? initialDoc.fecha : new Date().toISOString().split('T')[0],
       autor: autor.trim() || currentUser.name,
       descripcion: descripcion.trim(),

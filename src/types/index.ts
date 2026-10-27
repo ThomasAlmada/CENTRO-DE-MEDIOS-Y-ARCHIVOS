@@ -19,6 +19,33 @@ export type AdministrativeType =
   | 'PLANIFICACIÓN'
   | 'REGISTRO';
 
+export type OfficeFolioCategory =
+  | 'Actas y reuniones'
+  | 'Inventario'
+  | 'Eventos'
+  | 'Carteles'
+  | 'Proyectos'
+  | 'Notas y resolucion'
+  | 'Presupuesto recaudacion y balance'
+  | 'Informe'
+  | 'Planificacion'
+  | 'Registro'
+  | 'Deportes'
+  | 'Accion social'
+  | 'Cultura y eventos'
+  | 'Ambiente y proteccion animal'
+  | 'Prensa redes y comunicacion';
+
+export interface OfficeFolioInfo {
+  id: string;
+  name: OfficeFolioCategory;
+  estanteDefault: string;
+  color: string;
+  icon: string;
+  descripcion: string;
+  categoriaTipo: 'ADMINISTRATIVO' | 'OPERATIVO';
+}
+
 export type UserRole = 
   | 'ADMIN' 
   | 'CARGADOR_DATOS' 
@@ -40,19 +67,21 @@ export interface UserProfile {
 
 export interface ArchiveDocument {
   id: string;
-  codigoFolio: string; // e.g. "PE-DEP-INF-2024-042"
+  codigoFolio: string; // e.g. "FOLIO-ACT-2024-001"
   titulo: string;
+  folioNombre?: OfficeFolioCategory; // uno de los 15 folios de los estantes
+  numeroHoja?: string; // e.g. "Hoja 01", "Folio 12"
   areaOperativa: OperativeArea;
   tipoAdministrativo: AdministrativeType;
   subtipoDetalle?: string; // Sub-item from WhatsApp list
   anio: number;
-  estanteFisico: string; // e.g. "Estante A - Balda 1 - Caja 04"
+  estanteFisico: string; // e.g. "Estante 1 - Balda A"
   fecha: string;
   autor: string;
   descripcion: string;
   soporteFisico: 'Original Manuscrito' | 'Planilla Impresa' | 'Expediente Cosido' | 'Carpeta Colgante' | 'Fotografía Papel' | 'Afiche / Cartel';
   visibilidad: 'Público' | 'Uso Interno' | 'Confidencial Coordinación';
-  fotoUrl?: string;
+  fotoUrl?: string; // Foto escaneada / digitalizada del papel
   chicosVinculados?: string[]; // IDs de fichas
   etiquetas: string[];
   creadoEn: string;

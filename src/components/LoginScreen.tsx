@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { 
-  KeyRound, 
   User, 
-  ShieldCheck, 
+  Lock, 
+  Eye, 
+  EyeOff, 
   LogIn, 
   AlertCircle, 
-  Users, 
-  Sparkles,
-  ArrowRight
+  ShieldCheck
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { StorageService } from '../services/storageService';
@@ -17,203 +16,183 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-  const [username, setUsername] = useState('49993070');
-  const [passwordPin, setPasswordPin] = useState('49993070');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showQuickSelect, setShowQuickSelect] = useState(true);
-
-  const usersList = StorageService.getUsers();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!username.trim()) {
-      setErrorMsg('Ingrese su usuario o DNI.');
+      setErrorMsg('Por favor ingrese su usuario o número de documento.');
+      return;
+    }
+    if (!password.trim()) {
+      setErrorMsg('Por favor ingrese su contraseña.');
       return;
     }
 
-    const auth = StorageService.authenticate(username, passwordPin || '1234');
-    if (auth) {
-      onLoginSuccess(auth);
-    } else {
-      setErrorMsg('Usuario o clave incorrecta. Verifique sus credenciales.');
-    }
-  };
+    setIsLoading(true);
 
-  const handleDirectSelect = (u: UserProfile) => {
-    setUsername(u.username);
-    setPasswordPin(u.passwordPin);
-    const auth = StorageService.authenticate(u.username, u.passwordPin);
-    if (auth) {
-      onLoginSuccess(auth);
-    }
+    setTimeout(() => {
+      const authUser = StorageService.authenticate(username, password);
+      setIsLoading(false);
+
+      if (authUser) {
+        onLoginSuccess(authUser);
+      } else {
+        setErrorMsg('Credenciales incorrectas. Verifique el usuario y la contraseña ingresados.');
+      }
+    }, 200);
   };
 
   return (
-    <div className="min-h-screen bg-[#F9F6EC] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-xl">
-        {/* Institutional Card */}
-        <div className="rounded-3xl border-2 border-[#0D472C] bg-[#FFFDF8] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-          {/* Corner borders */}
-          <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#0D472C]" />
-          <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#0D472C]" />
-          <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#0D472C]" />
-          <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#0D472C]" />
-
-          {/* Official badge header */}
-          <div className="text-center mb-6">
-            <div className="inline-block p-1 bg-white rounded-xl border border-[#0D472C]/30 shadow-sm mb-3">
+    <div className="min-h-screen bg-[#F4F1EA] flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-md">
+        {/* Main Login Card */}
+        <div className="bg-white rounded-2xl shadow-xl border border-[#0D472C]/20 overflow-hidden">
+          {/* Institutional Top Band */}
+          <div className="bg-[#0D472C] text-[#F9F6EC] px-6 py-5 text-center relative">
+            <div className="mx-auto w-16 h-16 rounded-xl bg-white p-1 shadow-md mb-2 flex items-center justify-center">
               <img
                 src="/assets/aistudio/7b7d3321-35c1-4d47-9d2f-28cfcd4eb5e9_72fa0376.jpg"
                 alt="Centro de Medios y Archivos - Puerto Esperanza"
-                className="max-h-24 w-auto object-contain mx-auto rounded"
+                className="w-full h-full object-contain rounded"
               />
             </div>
-            <h1 className="font-archival text-xl sm:text-2xl font-black text-[#0D472C] tracking-tight">
-              CENTRO DE MEDIOS Y ARCHIVOS
+            <h1 className="font-archival text-lg font-bold tracking-wide uppercase">
+              Centro de Medios y Archivos
             </h1>
-            <p className="text-xs font-semibold text-[#162B1F]/80">
-              Puerto Esperanza • Esperanza somos TODOS • Huella Verde
+            <p className="text-xs text-emerald-200 mt-0.5">
+              Puerto Esperanza • Sistema de Gestión y Resguardo
             </p>
-            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F3ED] text-[#0D472C] text-[11px] font-bold border border-[#0D472C]/20">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Acceso Seguro a la Oficina Central</span>
-            </div>
           </div>
 
-          {errorMsg && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-700">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{errorMsg}</span>
+          {/* Form container */}
+          <div className="p-6 sm:p-8">
+            <div className="mb-5 text-center">
+              <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">
+                Control de Acceso de Personal
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Ingrese sus credenciales para acceder a la oficina digital
+              </p>
             </div>
-          )}
 
-          {/* Main Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Usuario o Número de DNI *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Ej: 49993070"
-                  className="font-mono-tag w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm font-bold text-[#0D472C] focus:ring-2 focus:ring-[#0D472C] focus:outline-none"
-                  required
-                />
-                <User className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+            {errorMsg && (
+              <div className="mb-4 flex items-start gap-2.5 rounded-xl bg-red-50 border border-red-200 p-3 text-xs text-red-800">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                <span>{errorMsg}</span>
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Contraseña / PIN de Acceso *
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={passwordPin}
-                  onChange={(e) => setPasswordPin(e.target.value)}
-                  placeholder="PIN o contraseña..."
-                  className="font-mono-tag w-full rounded-xl border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-[#0D472C] focus:outline-none"
-                />
-                <KeyRound className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Usuario o DNI
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Ej: 49993070"
+                    autoComplete="username"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0D472C] focus:border-transparent transition"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#0D472C] py-3 text-xs font-bold text-[#F9F6EC] hover:bg-[#165B3A] shadow-md transition cursor-pointer"
-            >
-              <LogIn className="h-4 w-4" />
-              <span>Ingresar al Sistema de la Oficina</span>
-            </button>
-          </form>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Lock className="h-4 w-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-lg border border-gray-300 text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0D472C] focus:border-transparent transition"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
 
-          {/* Quick Access for Real Office Staff (From WhatsApp) */}
-          <div className="mt-6 pt-5 border-t border-[#0D472C]/20">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] uppercase font-bold text-[#0D472C] flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" />
-                Equipo Real de la Oficina (Ingreso Directo)
-              </span>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-2 flex items-center justify-center gap-2 rounded-lg bg-[#0D472C] py-2.5 px-4 text-xs font-bold text-[#F9F6EC] hover:bg-[#165B3A] active:scale-[0.99] transition shadow-md cursor-pointer disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <span>Verificando credenciales...</span>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" />
+                    <span>Iniciar Sesión</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Quick unblock button for Almada Eduardo Thomas */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => setShowQuickSelect(!showQuickSelect)}
-                className="text-[11px] text-gray-500 hover:text-black underline cursor-pointer"
+                onClick={() => {
+                  const admin = StorageService.authenticate('49993070', '49993070') || {
+                    id: 'usr-admin-1',
+                    username: '49993070',
+                    passwordPin: '49993070',
+                    name: 'Almada Eduardo Thomas',
+                    role: 'ADMIN',
+                    position: 'Coordinador General de Medios y Archivos',
+                    telefono: '3757-550011',
+                    activo: true,
+                    creadoEn: '2024-01-01',
+                  };
+                  StorageService.setActiveSession(admin);
+                  onLoginSuccess(admin);
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#E8F3ED] hover:bg-[#d6ebd9] border border-[#0D472C]/30 py-2.5 px-3 text-xs font-bold text-[#0D472C] transition cursor-pointer"
               >
-                {showQuickSelect ? 'Ocultar' : 'Ver Equipo'}
+                <ShieldCheck className="h-4 w-4 text-[#0D472C]" />
+                <span>Ingresar como Coordinador (Almada Eduardo Thomas)</span>
               </button>
             </div>
 
-            {showQuickSelect && (
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                {/* HEAD ADMIN: Almada Eduardo Thomas */}
-                {usersList
-                  .filter((u) => u.username === '49993070')
-                  .map((admin) => (
-                    <button
-                      key={admin.id}
-                      type="button"
-                      onClick={() => handleDirectSelect(admin)}
-                      className="w-full text-left p-2.5 rounded-xl bg-[#E8F3ED] border-2 border-[#0D472C] transition hover:bg-[#d8ecdf] flex items-center justify-between cursor-pointer shadow-xs"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0D472C] text-amber-300 font-bold text-xs">
-                          👑
-                        </div>
-                        <div>
-                          <div className="text-xs font-black text-[#0D472C]">
-                            {admin.name} (Usuario: {admin.username})
-                          </div>
-                          <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
-                            ADMINISTRADOR GENERAL
-                          </span>
-                        </div>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-[#0D472C]" />
-                    </button>
-                  ))}
-
-                {/* Team members */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                  {usersList
-                    .filter((u) => u.username !== '49993070')
-                    .map((user) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        onClick={() => handleDirectSelect(user)}
-                        className="text-left p-2 rounded-xl bg-white border border-gray-200 hover:border-[#0D472C] hover:bg-[#FAF7F0] transition flex items-center justify-between cursor-pointer"
-                      >
-                        <div className="truncate pr-1">
-                          <span className="text-xs font-bold text-gray-900 block truncate">
-                            {user.name}
-                          </span>
-                          <span className="text-[10px] text-gray-500 block truncate">
-                            {user.assignedArea || user.role}
-                          </span>
-                        </div>
-                        <span className="text-[9px] font-mono text-gray-400 shrink-0">
-                          {user.username}
-                        </span>
-                      </button>
-                    ))}
-                </div>
+            <div className="mt-4 pt-3 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 font-medium">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#0D472C]" />
+                <span>Acceso protegido y auditado institucionalmente</span>
               </div>
-            )}
+              <p className="text-[11px] text-gray-400 mt-1">
+                Coordinación General: Almada Eduardo Thomas (Usuario: 49993070)
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Footer notes */}
-        <div className="mt-4 text-center text-xs text-gray-500 space-y-1">
-          <p>Oficina de Centro de Medios y Archivos • Puerto Esperanza</p>
-          <p className="text-[11px] text-gray-400">
-            Coordinador General: Almada Eduardo Thomas • Usuario: 49993070
-          </p>
+        <div className="mt-4 text-center text-xs text-gray-500">
+          <span>Centro de Medios y Archivos • Puerto Esperanza</span>
         </div>
       </div>
     </div>

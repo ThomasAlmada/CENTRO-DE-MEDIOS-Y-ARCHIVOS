@@ -110,15 +110,13 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const handleDelete = (user: UserProfile) => {
     if (user.username === '49993070') {
-      alert('La cuenta del Coordinador General Almada Eduardo Thomas está protegida y no puede eliminarse.');
+      setErrorMsg('La cuenta del Coordinador General Almada Eduardo Thomas está protegida y no puede eliminarse.');
       return;
     }
 
-    if (confirm(`¿Confirma dar de baja al usuario ${user.name} (${user.username})?`)) {
-      const updated = StorageService.deleteUser(user.id, currentUser);
-      setUsers(updated);
-      onUsersUpdated();
-    }
+    const updated = StorageService.deleteUser(user.id, currentUser);
+    setUsers(updated);
+    onUsersUpdated();
   };
 
   return (

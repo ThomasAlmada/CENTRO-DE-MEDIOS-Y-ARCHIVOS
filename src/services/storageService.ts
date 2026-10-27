@@ -103,7 +103,6 @@ export class StorageService {
 
     // Never delete head admin
     if (target.username === '49993070') {
-      alert('No se puede eliminar la cuenta del Coordinador General Almada Eduardo Thomas.');
       return list;
     }
 

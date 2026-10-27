@@ -8,7 +8,8 @@ import {
   Coins, 
   Calendar, 
   QrCode,
-  Lock
+  Lock,
+  Folder
 } from 'lucide-react';
 import { UserProfile } from '../types';
 
@@ -28,6 +29,12 @@ export const Navigation: React.FC<NavigationProps> = ({
   activeLoansCount,
 }) => {
   const tabs = [
+    {
+      id: 'shelves',
+      label: '📁 15 Folios de Estantes',
+      icon: Folder,
+      description: 'Papeles en estantes físicos',
+    },
     {
       id: 'dashboard',
       label: 'Tablero General',
@@ -78,6 +85,13 @@ export const Navigation: React.FC<NavigationProps> = ({
       label: 'Localizador QR',
       icon: QrCode,
       description: 'Buscador de estante',
+    },
+    {
+      id: 'users',
+      label: 'Personal & Roles',
+      icon: Users,
+      adminOnly: true,
+      description: 'Alta y control de usuarios',
     },
   ];
 

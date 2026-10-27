@@ -14,6 +14,7 @@ import { StorageService } from './services/storageService';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 import { LoginScreen } from './components/LoginScreen';
+import { UserManagementView } from './components/UserManagementView';
 import { UserManagementModal } from './components/UserManagementModal';
 import { DashboardView } from './components/DashboardView';
 import { DocumentsView } from './components/DocumentsView';
@@ -23,6 +24,9 @@ import { RequestsView } from './components/RequestsView';
 import { BudgetView } from './components/BudgetView';
 import { CalendarView } from './components/CalendarView';
 import { QRLookupView } from './components/QRLookupView';
+import { OfficeShelvesView } from './components/OfficeShelvesView';
+import { DigitizePaperModal } from './components/DigitizePaperModal';
+import { OfficeFolioCategory } from './types';
 
 // Modals
 import { DocumentModal } from './components/DocumentModal';
@@ -38,9 +42,13 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageService.getActiveSession());
   const [allUsers, setAllUsers] = useState<UserProfile[]>(() => StorageService.getUsers());
 
-  // Navigation tab
-  const [currentTab, setCurrentTab] = useState<string>('dashboard');
+  // Navigation tab (starts directly at the 15 Folios on the Shelves)
+  const [currentTab, setCurrentTab] = useState<string>('shelves');
   const [activeAreaFilter, setActiveAreaFilter] = useState<OperativeArea | 'TODAS'>('TODAS');
+
+  // Digitize paper modal states
+  const [isDigitizeModalOpen, setIsDigitizeModalOpen] = useState(false);
+  const [digitizeTargetFolio, setDigitizeTargetFolio] = useState<OfficeFolioCategory>('Actas y reuniones');
 
   // Archive data
   const [documents, setDocuments] = useState<ArchiveDocument[]>(() => StorageService.getDocuments());
@@ -250,19 +258,28 @@ export default function App() {
   const pendingRequestsCount = requests.filter((r) => r.estado === 'Pendiente').length;
   const activeLoansCount = loans.filter((l) => l.estado === 'En Curso').length;
 
+  const handleSavePaper = (doc: ArchiveDocument) => {
+    if (!currentUser) return;
+    const updated = StorageService.saveDocument(doc, currentUser);
+    setDocuments(updated);
+    showToast(`✓ Papel guardado y digitalizado en "${doc.folioNombre || 'Folio'}"`);
+  };
+
   return (
     <div className="min-h-screen bg-[#F9F6EC] text-[#162B1F] flex flex-col font-sans selection:bg-[#0D472C] selection:text-white">
-      {/* Header with official seal, role switcher & PWA support */}
+      {/* Header with official seal, profile info & session control */}
       <Header
         currentUser={currentUser}
-        allUsers={allUsers}
-        onSwitchUser={handleSwitchUser}
         onSearchFolio={handleSearchFolio}
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
         onResetFactory={handleResetFactory}
-        onOpenUserManagement={() => setIsUserManagementOpen(true)}
+        onOpenUserManagement={() => setCurrentTab('users')}
         onLogout={handleLogout}
+        onOpenDigitize={() => {
+          setDigitizeTargetFolio('Actas y reuniones');
+          setIsDigitizeModalOpen(true);
+        }}
       />
 
       {/* Navigation Tabs */}
@@ -281,6 +298,25 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="grow max-w-7xl w-full mx-auto px-4 py-6">
+        {currentTab === 'shelves' && (
+          <OfficeShelvesView
+            documents={documents}
+            currentUser={currentUser}
+            onOpenDigitizeFolio={(folioName) => {
+              setDigitizeTargetFolio(folioName);
+              setIsDigitizeModalOpen(true);
+            }}
+            onPrintFolioLabel={(doc) => {
+              setPrintingDoc(doc);
+              setIsFolioPrintModalOpen(true);
+            }}
+            onViewDocDetail={(doc) => {
+              setEditingDoc(doc);
+              setIsDocModalOpen(true);
+            }}
+          />
+        )}
+
         {currentTab === 'dashboard' && (
           <DashboardView
             documents={documents}
@@ -391,9 +427,16 @@ export default function App() {
             }}
           />
         )}
+
+        {currentTab === 'users' && currentUser.role === 'ADMIN' && (
+          <UserManagementView
+            currentUser={currentUser}
+            onUsersUpdated={handleUsersUpdated}
+          />
+        )}
       </main>
 
-      {/* Footer without any municipal words */}
+      {/* Institutional footer */}
       <footer className="border-t border-[#0D472C]/20 bg-[#FFFDF8] py-4 text-center text-xs text-gray-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -474,6 +517,14 @@ export default function App() {
         onClose={() => setIsBudgetModalOpen(false)}
         currentUser={currentUser}
         onSubmit={handleSaveBudget}
+      />
+
+      <DigitizePaperModal
+        isOpen={isDigitizeModalOpen}
+        onClose={() => setIsDigitizeModalOpen(false)}
+        onSavePaper={handleSavePaper}
+        currentUser={currentUser}
+        initialFolio={digitizeTargetFolio}
       />
     </div>
   );
