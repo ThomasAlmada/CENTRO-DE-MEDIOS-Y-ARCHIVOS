@@ -153,39 +153,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               </button>
             </form>
 
-            {/* Quick unblock button for Almada Eduardo Thomas */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => {
-                  const admin = StorageService.authenticate('49993070', '49993070') || {
-                    id: 'usr-admin-1',
-                    username: '49993070',
-                    passwordPin: '49993070',
-                    name: 'Almada Eduardo Thomas',
-                    role: 'ADMIN',
-                    position: 'Coordinador General de Medios y Archivos',
-                    telefono: '3757-550011',
-                    activo: true,
-                    creadoEn: '2024-01-01',
-                  };
-                  StorageService.setActiveSession(admin);
-                  onLoginSuccess(admin);
-                }}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#E8F3ED] hover:bg-[#d6ebd9] border border-[#0D472C]/30 py-2.5 px-3 text-xs font-bold text-[#0D472C] transition cursor-pointer"
-              >
+            <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 font-medium">
                 <ShieldCheck className="h-4 w-4 text-[#0D472C]" />
-                <span>Ingresar como Coordinador (Almada Eduardo Thomas)</span>
-              </button>
-            </div>
-
-            <div className="mt-4 pt-3 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500 font-medium">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#0D472C]" />
-                <span>Acceso protegido y auditado institucionalmente</span>
+                <span>Acceso Oficial Protegido y Auditado</span>
               </div>
               <p className="text-[11px] text-gray-400 mt-1">
-                Coordinación General: Almada Eduardo Thomas (Usuario: 49993070)
+                Uso exclusivo para personal acreditado y autoridades del Centro.
               </p>
             </div>
           </div>

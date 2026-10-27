@@ -6,22 +6,28 @@ import {
   Camera, 
   FileText, 
   QrCode, 
-  ExternalLink, 
   Calendar, 
   MapPin, 
   User, 
   Plus, 
   Eye, 
-  Download,
-  Filter,
-  CheckCircle2,
-  Layers,
-  ChevronRight,
-  ArrowLeft,
-  X
+  Layers, 
+  ChevronRight, 
+  ArrowLeft, 
+  X, 
+  Lock, 
+  ShieldCheck, 
+  AlertTriangle 
 } from 'lucide-react';
 import { ArchiveDocument, UserProfile, OfficeFolioCategory } from '../types';
 import { OFFICE_SHELF_FOLIOS } from '../data/mockData';
+import { 
+  canUserAccessFolio, 
+  canUserUploadToFolio, 
+  getAllowedFoliosForUser, 
+  canUserViewDocument, 
+  isSecretarioOrAdmin 
+} from '../utils/permissions';
 
 interface OfficeShelvesViewProps {
   documents: ArchiveDocument[];
@@ -42,6 +48,7 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [shelfFilter, setShelfFilter] = useState<string>('TODOS');
   const [selectedPaperPreview, setSelectedPaperPreview] = useState<ArchiveDocument | null>(null);
+  const [accessDeniedWarning, setAccessDeniedWarning] = useState<string | null>(null);
 
   // Group documents by folio
   const docsByFolio = useMemo(() => {
@@ -49,11 +56,9 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
     OFFICE_SHELF_FOLIOS.forEach((f) => map.set(f.name, []));
 
     documents.forEach((doc) => {
-      // Find matching folio by explicit folioNombre or inferred from administrative / operative types
       let matchedName: OfficeFolioCategory | null = doc.folioNombre || null;
 
       if (!matchedName) {
-        // Fallback mapping
         if (doc.tipoAdministrativo === 'ACTAS Y REUNIONES') matchedName = 'Actas y reuniones';
         else if (doc.tipoAdministrativo === 'INVENTARIO') matchedName = 'Inventario';
         else if (doc.tipoAdministrativo === 'EVENTOS') matchedName = 'Eventos';
@@ -78,12 +83,20 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
     return map;
   }, [documents]);
 
-  // Filtered folios
+  const allowedFolios = useMemo(() => getAllowedFoliosForUser(currentUser), [currentUser]);
+
+  // Filtered folios based on search, shelf, and visitor visibility
   const filteredFolios = useMemo(() => {
     return OFFICE_SHELF_FOLIOS.filter((folio) => {
+      // If role is VISITANTE, ONLY show public folios
+      if (currentUser.role === 'VISITANTE' && !allowedFolios.includes(folio.name)) {
+        return false;
+      }
+
       if (shelfFilter !== 'TODOS' && !folio.estanteDefault.includes(shelfFilter)) {
         return false;
       }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const docsInFolio = docsByFolio.get(folio.name) || [];
@@ -95,13 +108,36 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
         );
         return matchTitle || matchDesc || matchShelf || matchDocs;
       }
+
       return true;
     });
-  }, [shelfFilter, searchQuery, docsByFolio]);
+  }, [shelfFilter, searchQuery, docsByFolio, currentUser, allowedFolios]);
 
   // Selected folio details
   const activeFolioInfo = OFFICE_SHELF_FOLIOS.find((f) => f.name === selectedFolioName);
-  const activeFolioDocs = selectedFolioName ? docsByFolio.get(selectedFolioName) || [] : [];
+  
+  // Papers inside the active folio, strictly filtered by user permissions
+  const activeFolioDocs = useMemo(() => {
+    if (!selectedFolioName) return [];
+    const allInFolio = docsByFolio.get(selectedFolioName) || [];
+    return allInFolio.filter((doc) => canUserViewDocument(currentUser, doc));
+  }, [selectedFolioName, docsByFolio, currentUser]);
+
+  const isCurrentFolioAllowed = selectedFolioName ? canUserAccessFolio(currentUser, selectedFolioName) : false;
+  const canUploadToCurrentFolio = selectedFolioName ? canUserUploadToFolio(currentUser, selectedFolioName) : false;
+
+  // Primary folio to open when clicking "Subir Papel"
+  const defaultUploadFolio = allowedFolios[0] || 'Carteles';
+
+  const handleOpenFolio = (folioName: OfficeFolioCategory) => {
+    const isAllowed = canUserAccessFolio(currentUser, folioName);
+    if (!isAllowed) {
+      setAccessDeniedWarning(`El folio "${folioName}" no está habilitado para su área operativa (${currentUser.assignedArea || 'Sin área'}). Solo el Coordinador General, Secretaría o el equipo asignado tienen autorización de ingreso.`);
+      return;
+    }
+    setAccessDeniedWarning(null);
+    setSelectedFolioName(folioName);
+  };
 
   return (
     <div className="space-y-6">
@@ -109,23 +145,43 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
       <div className="rounded-3xl bg-[#0D472C] text-[#F9F6EC] p-6 shadow-md border-2 border-emerald-800 relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-bold bg-amber-400 text-gray-950 px-2 py-0.5 rounded font-mono uppercase tracking-wider">
+            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <span className="text-xs font-bold bg-amber-400 text-gray-950 px-2.5 py-0.5 rounded font-mono uppercase tracking-wider">
                 Oficina Central
               </span>
               <span className="text-xs text-emerald-200">Puerto Esperanza</span>
+
+              {/* Area & Role indicator badge */}
+              {currentUser.role === 'VISITANTE' ? (
+                <span className="text-[11px] font-bold bg-amber-900/60 text-amber-200 px-2.5 py-0.5 rounded border border-amber-500/40">
+                  Modo Visitante Comunitario • Sin Área Asignada
+                </span>
+              ) : isSecretarioOrAdmin(currentUser) ? (
+                <span className="text-[11px] font-bold bg-emerald-900 text-amber-300 px-2.5 py-0.5 rounded border border-amber-400/30">
+                  👑 Coordinación General • Acceso Total a los 15 Folios
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold bg-emerald-900 text-emerald-100 px-2.5 py-0.5 rounded border border-emerald-700">
+                  Área: {currentUser.assignedArea} (Acceso Autorizado: {allowedFolios.length} folios)
+                </span>
+              )}
             </div>
+
             <h2 className="font-archival text-2xl font-black tracking-tight text-white">
               Estantes y Folios de la Oficina
             </h2>
             <p className="text-xs text-emerald-100 max-w-xl mt-1 leading-relaxed">
-              Resguardo y digitalización de los <strong>15 Folios Oficiales</strong> organizados en los estantes físicos de la oficina.
+              {currentUser.role === 'VISITANTE'
+                ? 'Consulta pública de talleres, cartelería de difusión y eventos comunitarios.'
+                : isSecretarioOrAdmin(currentUser)
+                ? 'Resguardo y digitalización oficial de los 15 Folios Oficiales en estanterías físicas.'
+                : `Gestión documental y resguardo físico para el equipo de ${currentUser.assignedArea}.`}
             </p>
           </div>
 
           {currentUser.role !== 'VISITANTE' && (
             <button
-              onClick={() => onOpenDigitizeFolio('Actas y reuniones')}
+              onClick={() => onOpenDigitizeFolio(defaultUploadFolio)}
               className="flex items-center justify-center gap-2 rounded-2xl bg-amber-400 hover:bg-amber-300 text-emerald-950 px-5 py-3 text-xs font-bold shadow-lg transition cursor-pointer self-start sm:self-auto active:scale-95"
             >
               <Camera className="h-4 w-4 text-emerald-950" />
@@ -134,6 +190,23 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* ACCESS DENIED ALERT */}
+      {accessDeniedWarning && (
+        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border-2 border-amber-400 p-4 text-amber-950 shadow-sm animate-in fade-in">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 text-xs">
+            <strong className="block font-bold text-sm mb-0.5">Acceso Restringido por Política de Área</strong>
+            <p>{accessDeniedWarning}</p>
+          </div>
+          <button
+            onClick={() => setAccessDeniedWarning(null)}
+            className="text-xs font-bold text-amber-800 hover:text-black cursor-pointer p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* IF A FOLIO IS SELECTED: SHOW ITS PAPERS */}
       {selectedFolioName && activeFolioInfo ? (
@@ -148,7 +221,7 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
               <span>Volver a todos los Estantes</span>
             </button>
 
-            {currentUser.role !== 'VISITANTE' && (
+            {canUploadToCurrentFolio && (
               <button
                 onClick={() => onOpenDigitizeFolio(selectedFolioName)}
                 className="flex items-center gap-1.5 rounded-xl bg-[#0D472C] px-3.5 py-1.5 text-xs font-bold text-white shadow hover:bg-[#165B3A] transition cursor-pointer"
@@ -172,8 +245,13 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
                       Folio: {activeFolioInfo.name}
                     </h3>
                     <span className="text-[10px] font-bold bg-[#E8F3ED] text-[#0D472C] px-2 py-0.5 rounded border border-[#0D472C]/20">
-                      {activeFolioDocs.length} papeles archivados
+                      {activeFolioDocs.length} papeles visibles
                     </span>
+                    {!isCurrentFolioAllowed && (
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded border border-amber-300 flex items-center gap-1">
+                        <Lock className="h-3 w-3" /> Solo Lectura Restringida
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-600 mt-1">
                     {activeFolioInfo.descripcion}
@@ -192,12 +270,16 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
             <div className="rounded-2xl border-2 border-dashed border-[#0D472C]/20 bg-white p-12 text-center">
               <FileText className="mx-auto h-12 w-12 text-gray-300" />
               <h4 className="font-archival mt-3 text-base font-bold text-gray-700">
-                Este folio físico aún no tiene papeles digitalizados
+                {currentUser.role === 'VISITANTE'
+                  ? 'No hay papeles públicos disponibles en este folio'
+                  : 'Este folio físico aún no tiene papeles digitalizados para tu área'}
               </h4>
               <p className="mt-1 text-xs text-gray-500 max-w-md mx-auto">
-                Tome los papeles de la carpeta en el estante y súbalos con foto o escaneo digital.
+                {currentUser.role === 'VISITANTE'
+                  ? 'Los documentos de uso interno están resguardados en la coordinación de la oficina.'
+                  : 'Tome los papeles de la carpeta en el estante y súbalos con foto o escaneo digital.'}
               </p>
-              {currentUser.role !== 'VISITANTE' && (
+              {canUploadToCurrentFolio && (
                 <button
                   onClick={() => onOpenDigitizeFolio(selectedFolioName)}
                   className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#0D472C] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#165B3A] transition cursor-pointer"
@@ -282,7 +364,7 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
           )}
         </div>
       ) : (
-        /* OVERVIEW OF ALL 15 PHYSICAL FOLIOS ON THE SHELVES */
+        /* OVERVIEW OF PHYSICAL FOLIOS ON THE SHELVES */
         <div className="space-y-5">
           {/* Shelf Filters & Search Bar */}
           <div className="rounded-2xl border border-[#0D472C]/20 bg-white p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
@@ -291,7 +373,7 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar entre los 15 folios..."
+                placeholder="Buscar entre los folios..."
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0D472C]"
               />
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
@@ -318,14 +400,20 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
 
           {/* THE 15 FOLIOS GRID */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredFolios.map((folio, idx) => {
-              const docs = docsByFolio.get(folio.name) || [];
-              const hasDocs = docs.length > 0;
+            {filteredFolios.map((folio) => {
+              const allDocsInFolio = docsByFolio.get(folio.name) || [];
+              const visibleDocs = allDocsInFolio.filter((d) => canUserViewDocument(currentUser, d));
+              const isAllowed = canUserAccessFolio(currentUser, folio.name);
+              const canUpload = canUserUploadToFolio(currentUser, folio.name);
 
               return (
                 <div
                   key={folio.id}
-                  className="rounded-2xl border-2 border-[#0D472C]/20 bg-white shadow-xs hover:shadow-md hover:border-[#0D472C] transition p-5 flex flex-col justify-between"
+                  className={`rounded-2xl border-2 transition p-5 flex flex-col justify-between ${
+                    isAllowed
+                      ? 'border-[#0D472C]/20 bg-white shadow-xs hover:shadow-md hover:border-[#0D472C]'
+                      : 'border-gray-200 bg-gray-50/80 opacity-80'
+                  }`}
                 >
                   <div>
                     {/* Top shelf & count badge */}
@@ -335,21 +423,34 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
                         <span>{folio.estanteDefault}</span>
                       </span>
 
-                      <span
-                        className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                          hasDocs
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
-                      >
-                        {docs.length} papeles
-                      </span>
+                      {isAllowed ? (
+                        <span
+                          className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                            visibleDocs.length > 0
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {visibleDocs.length} papeles
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">
+                          <Lock className="h-3 w-3" />
+                          <span>No Autorizado</span>
+                        </span>
+                      )}
                     </div>
 
                     {/* Folio Name and Icon */}
                     <div className="flex items-start gap-3 mb-2">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0D472C] text-[#F9F6EC] shadow-xs shrink-0">
-                        <Folder className="h-5 w-5 text-amber-300" />
+                      <span className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-xs shrink-0 ${
+                        isAllowed ? 'bg-[#0D472C] text-[#F9F6EC]' : 'bg-gray-300 text-gray-600'
+                      }`}>
+                        {isAllowed ? (
+                          <Folder className="h-5 w-5 text-amber-300" />
+                        ) : (
+                          <Lock className="h-5 w-5 text-gray-500" />
+                        )}
                       </span>
                       <div>
                         <h3 className="font-archival text-base font-black text-[#0D472C] uppercase tracking-wide leading-tight">
@@ -368,15 +469,25 @@ export const OfficeShelvesView: React.FC<OfficeShelvesViewProps> = ({
 
                   {/* Actions for this Folio */}
                   <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => setSelectedFolioName(folio.name)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#FAF7F0] hover:bg-[#eae6db] text-[#0D472C] text-xs font-bold border border-[#0D472C]/20 transition cursor-pointer"
-                    >
-                      <span>Abrir Folio</span>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
+                    {isAllowed ? (
+                      <button
+                        onClick={() => handleOpenFolio(folio.name)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#FAF7F0] hover:bg-[#eae6db] text-[#0D472C] text-xs font-bold border border-[#0D472C]/20 transition cursor-pointer"
+                      >
+                        <span>Abrir Folio</span>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleOpenFolio(folio.name)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-gray-200 text-gray-600 text-xs font-semibold cursor-not-allowed"
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                        <span>Restringido a su Área</span>
+                      </button>
+                    )}
 
-                    {currentUser.role !== 'VISITANTE' && (
+                    {canUpload && (
                       <button
                         onClick={() => onOpenDigitizeFolio(folio.name)}
                         title={`Subir y digitalizar papel en ${folio.name}`}

@@ -9,6 +9,12 @@ import {
   UserProfile,
   OperativeArea,
   AdministrativeType,
+  OfficeShelf,
+  InstitutionalInventoryItem,
+  AreaActa,
+  OfficeNotice,
+  AreaInscriptionForm,
+  InscriptionSubmission,
 } from '../types';
 import {
   INITIAL_DOCUMENTS,
@@ -20,6 +26,12 @@ import {
   INITIAL_EVENTS,
   DEMO_USERS,
   ADMINISTRATIVE_TYPES,
+  INITIAL_SHELVES,
+  INITIAL_INSTITUTIONAL_INVENTORY,
+  INITIAL_AREA_ACTAS,
+  INITIAL_NOTICES,
+  INITIAL_INSCRIPTION_FORMS,
+  INITIAL_INSCRIPTION_SUBMISSIONS,
 } from '../data/mockData';
 
 const STORAGE_KEYS = {
@@ -33,6 +45,12 @@ const STORAGE_KEYS = {
   USERS: 'cma_pe_users_v2',
   ACTIVE_SESSION: 'cma_pe_session_v2',
   AUDIT_LOGS: 'cma_pe_audit_v2',
+  SHELVES: 'cma_pe_shelves_v2',
+  INST_INVENTORY: 'cma_pe_inst_inventory_v2',
+  AREA_ACTAS: 'cma_pe_area_actas_v2',
+  NOTICES: 'cma_pe_notices_v2',
+  INSCRIPTION_FORMS: 'cma_pe_insc_forms_v2',
+  INSCRIPTION_SUBS: 'cma_pe_insc_subs_v2',
 };
 
 export interface AuditLogEntry {
@@ -418,6 +436,190 @@ export class StorageService {
     }
   }
 
+  // ================= SHELVES MANAGEMENT =================
+  static getShelves(): OfficeShelf[] {
+    return this.getItem<OfficeShelf[]>(STORAGE_KEYS.SHELVES, INITIAL_SHELVES);
+  }
+
+  static saveShelf(shelf: OfficeShelf, user: UserProfile): OfficeShelf[] {
+    const list = this.getShelves();
+    const existingIndex = list.findIndex((s) => s.id === shelf.id);
+    let updated: OfficeShelf[];
+    if (existingIndex >= 0) {
+      updated = [...list];
+      updated[existingIndex] = shelf;
+      this.addAuditLog(user, 'Modificación de Estante', `${shelf.nombre} (${shelf.ubicacion})`);
+    } else {
+      updated = [...list, shelf];
+      this.addAuditLog(user, 'Alta de Estante Físico', `${shelf.nombre} (${shelf.ubicacion})`);
+    }
+    this.setItem(STORAGE_KEYS.SHELVES, updated);
+    return updated;
+  }
+
+  static deleteShelf(shelfId: string, user: UserProfile): OfficeShelf[] {
+    const list = this.getShelves();
+    const updated = list.filter((s) => s.id !== shelfId);
+    this.setItem(STORAGE_KEYS.SHELVES, updated);
+    this.addAuditLog(user, 'Baja de Estante', `Estante ID ${shelfId} eliminado`);
+    return updated;
+  }
+
+  // ================= INSTITUTIONAL INVENTORY =================
+  static getInstitutionalInventory(): InstitutionalInventoryItem[] {
+    return this.getItem<InstitutionalInventoryItem[]>(STORAGE_KEYS.INST_INVENTORY, INITIAL_INSTITUTIONAL_INVENTORY);
+  }
+
+  static saveInstitutionalInventoryItem(item: InstitutionalInventoryItem, user: UserProfile): InstitutionalInventoryItem[] {
+    const list = this.getInstitutionalInventory();
+    const existingIndex = list.findIndex((i) => i.id === item.id);
+    let updated: InstitutionalInventoryItem[];
+    if (existingIndex >= 0) {
+      updated = [...list];
+      updated[existingIndex] = item;
+      this.addAuditLog(user, 'Edición de Inventario Institucional', `${item.codigo}: ${item.articulo}`);
+    } else {
+      updated = [item, ...list];
+      this.addAuditLog(user, 'Alta en Inventario Institucional', `${item.codigo}: ${item.articulo} (${item.espacioUbicacion})`);
+    }
+    this.setItem(STORAGE_KEYS.INST_INVENTORY, updated);
+    return updated;
+  }
+
+  static deleteInstitutionalInventoryItem(itemId: string, user: UserProfile): InstitutionalInventoryItem[] {
+    const list = this.getInstitutionalInventory();
+    const updated = list.filter((i) => i.id !== itemId);
+    this.setItem(STORAGE_KEYS.INST_INVENTORY, updated);
+    this.addAuditLog(user, 'Baja de Inventario Institucional', `Artículo ID ${itemId} eliminado`);
+    return updated;
+  }
+
+  // ================= AREA ACTAS =================
+  static getAreaActas(): AreaActa[] {
+    return this.getItem<AreaActa[]>(STORAGE_KEYS.AREA_ACTAS, INITIAL_AREA_ACTAS);
+  }
+
+  static saveAreaActa(acta: AreaActa, user: UserProfile): AreaActa[] {
+    const list = this.getAreaActas();
+    const existingIndex = list.findIndex((a) => a.id === acta.id);
+    let updated: AreaActa[];
+    if (existingIndex >= 0) {
+      updated = [...list];
+      updated[existingIndex] = acta;
+      this.addAuditLog(user, 'Edición de Acta de Área', `${acta.numeroActa}: ${acta.titulo}`);
+    } else {
+      updated = [acta, ...list];
+      this.addAuditLog(user, 'Creación de Acta de Área', `${acta.numeroActa}: ${acta.titulo} (${acta.areaOperativa})`);
+    }
+    this.setItem(STORAGE_KEYS.AREA_ACTAS, updated);
+    return updated;
+  }
+
+  static deleteAreaActa(actaId: string, user: UserProfile): AreaActa[] {
+    const list = this.getAreaActas();
+    const updated = list.filter((a) => a.id !== actaId);
+    this.setItem(STORAGE_KEYS.AREA_ACTAS, updated);
+    this.addAuditLog(user, 'Eliminación de Acta', `Acta ID ${actaId} eliminada`);
+    return updated;
+  }
+
+  // ================= NOTICES & ALERTS =================
+  static getNotices(): OfficeNotice[] {
+    return this.getItem<OfficeNotice[]>(STORAGE_KEYS.NOTICES, INITIAL_NOTICES);
+  }
+
+  static saveNotice(notice: OfficeNotice, user: UserProfile): OfficeNotice[] {
+    const list = this.getNotices();
+    const existingIndex = list.findIndex((n) => n.id === notice.id);
+    let updated: OfficeNotice[];
+    if (existingIndex >= 0) {
+      updated = [...list];
+      updated[existingIndex] = notice;
+      this.addAuditLog(user, 'Edición de Aviso', `${notice.titulo}`);
+    } else {
+      updated = [notice, ...list];
+      this.addAuditLog(user, 'Publicación de Aviso Oficial', `${notice.nivel}: ${notice.titulo}`);
+    }
+    this.setItem(STORAGE_KEYS.NOTICES, updated);
+    return updated;
+  }
+
+  static toggleNotice(noticeId: string, user: UserProfile): OfficeNotice[] {
+    const list = this.getNotices();
+    const updated = list.map((n) => (n.id === noticeId ? { ...n, activo: !n.activo } : n));
+    this.setItem(STORAGE_KEYS.NOTICES, updated);
+    this.addAuditLog(user, 'Cambio de Estado de Aviso', `Aviso ${noticeId} alternado`);
+    return updated;
+  }
+
+  static deleteNotice(noticeId: string, user: UserProfile): OfficeNotice[] {
+    const list = this.getNotices();
+    const updated = list.filter((n) => n.id !== noticeId);
+    this.setItem(STORAGE_KEYS.NOTICES, updated);
+    this.addAuditLog(user, 'Eliminación de Aviso', `Aviso ID ${noticeId} retirado`);
+    return updated;
+  }
+
+  // ================= INSCRIPTION FORMS & SURVEYS =================
+  static getInscriptionForms(): AreaInscriptionForm[] {
+    return this.getItem<AreaInscriptionForm[]>(STORAGE_KEYS.INSCRIPTION_FORMS, INITIAL_INSCRIPTION_FORMS);
+  }
+
+  static saveInscriptionForm(form: AreaInscriptionForm, user: UserProfile): AreaInscriptionForm[] {
+    const list = this.getInscriptionForms();
+    const existingIndex = list.findIndex((f) => f.id === form.id);
+    let updated: AreaInscriptionForm[];
+    if (existingIndex >= 0) {
+      updated = [...list];
+      updated[existingIndex] = form;
+      this.addAuditLog(user, 'Edición Convocatoria', `${form.titulo}`);
+    } else {
+      updated = [form, ...list];
+      this.addAuditLog(user, 'Nueva Convocatoria/Ficha', `${form.titulo} (${form.areaOperativa})`);
+    }
+    this.setItem(STORAGE_KEYS.INSCRIPTION_FORMS, updated);
+    return updated;
+  }
+
+  static toggleInscriptionForm(formId: string, user: UserProfile): AreaInscriptionForm[] {
+    const list = this.getInscriptionForms();
+    const updated = list.map((f) => (f.id === formId ? { ...f, activa: !f.activa } : f));
+    this.setItem(STORAGE_KEYS.INSCRIPTION_FORMS, updated);
+    this.addAuditLog(user, 'Alternar Estado Convocatoria', `Convocatoria ID ${formId} alternada`);
+    return updated;
+  }
+
+  static deleteInscriptionForm(formId: string, user: UserProfile): AreaInscriptionForm[] {
+    const list = this.getInscriptionForms();
+    const updated = list.filter((f) => f.id !== formId);
+    this.setItem(STORAGE_KEYS.INSCRIPTION_FORMS, updated);
+    this.addAuditLog(user, 'Eliminación Convocatoria', `Convocatoria ID ${formId} eliminada`);
+    return updated;
+  }
+
+  // ================= INSCRIPTION SUBMISSIONS =================
+  static getInscriptionSubmissions(): InscriptionSubmission[] {
+    return this.getItem<InscriptionSubmission[]>(STORAGE_KEYS.INSCRIPTION_SUBS, INITIAL_INSCRIPTION_SUBMISSIONS);
+  }
+
+  static saveInscriptionSubmission(sub: InscriptionSubmission, user?: UserProfile): InscriptionSubmission[] {
+    const list = this.getInscriptionSubmissions();
+    const updated = [sub, ...list];
+    this.setItem(STORAGE_KEYS.INSCRIPTION_SUBS, updated);
+    if (user) {
+      this.addAuditLog(user, 'Registro de Inscripción', `Inscripción cargada para formulario ${sub.formularioId}`);
+    }
+    return updated;
+  }
+
+  // ================= AVAILABLE BALANCE =================
+  static getAvailableBalance(): number {
+    const records = this.getBudget();
+    const ingresos = records.filter((r) => r.tipo === 'Ingreso').reduce((acc, curr) => acc + curr.monto, 0);
+    const gastos = records.filter((r) => r.tipo === 'Gasto').reduce((acc, curr) => acc + curr.monto, 0);
+    return Math.max(0, ingresos - gastos);
+  }
+
   static resetToDefault(user: UserProfile): void {
     this.setItem(STORAGE_KEYS.USERS, DEMO_USERS);
     this.setItem(STORAGE_KEYS.DOCUMENTS, INITIAL_DOCUMENTS);
@@ -427,6 +629,12 @@ export class StorageService {
     this.setItem(STORAGE_KEYS.REQUESTS, INITIAL_REQUESTS);
     this.setItem(STORAGE_KEYS.BUDGET, INITIAL_BUDGET);
     this.setItem(STORAGE_KEYS.EVENTS, INITIAL_EVENTS);
-    this.addAuditLog(user, 'Reinicio de Base', 'Se cargaron los registros oficiales con equipos de WhatsApp');
+    this.setItem(STORAGE_KEYS.SHELVES, INITIAL_SHELVES);
+    this.setItem(STORAGE_KEYS.INST_INVENTORY, INITIAL_INSTITUTIONAL_INVENTORY);
+    this.setItem(STORAGE_KEYS.AREA_ACTAS, INITIAL_AREA_ACTAS);
+    this.setItem(STORAGE_KEYS.NOTICES, INITIAL_NOTICES);
+    this.setItem(STORAGE_KEYS.INSCRIPTION_FORMS, INITIAL_INSCRIPTION_FORMS);
+    this.setItem(STORAGE_KEYS.INSCRIPTION_SUBS, INITIAL_INSCRIPTION_SUBMISSIONS);
+    this.addAuditLog(user, 'Reinicio de Base', 'Se cargaron los registros oficiales con equipos de WhatsApp y estantería física');
   }
 }

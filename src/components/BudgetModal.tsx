@@ -7,6 +7,7 @@ interface BudgetModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: UserProfile;
+  availableBalance: number;
   onSubmit: (record: BudgetRecord) => void;
 }
 
@@ -14,6 +15,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   isOpen,
   onClose,
   currentUser,
+  availableBalance,
   onSubmit,
 }) => {
   const [tipo, setTipo] = useState<'Ingreso' | 'Gasto'>('Gasto');
@@ -29,10 +31,19 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
+
     if (monto <= 0) {
       setErrorMsg('El monto debe ser superior a cero.');
       return;
     }
+
+    // STRICT BALANCE VALIDATION: "NO SE PUEDE SACAR MÁS PLATA DE LO QUE HAY"
+    if (tipo === 'Gasto' && monto > availableBalance) {
+      setErrorMsg(`OPERACIÓN BLOQUEADA: Fondos insuficientes en caja. El saldo disponible es de $${availableBalance.toLocaleString()} ARS y el gasto intentado es de $${monto.toLocaleString()} ARS. No se puede egresar más dinero del existente.`);
+      return;
+    }
+
     if (!concepto.trim()) {
       setErrorMsg('Debe indicar el concepto o detalle del movimiento.');
       return;
@@ -88,6 +99,21 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
           </button>
         </div>
 
+        {/* Caja Balance Banner */}
+        <div className={`mb-4 rounded-xl p-3 border flex items-center justify-between ${
+          availableBalance > 0 
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+            : 'bg-red-50 border-red-200 text-red-900'
+        }`}>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider block">Saldo Disponible en Caja</span>
+            <span className="font-mono text-lg font-black">${availableBalance.toLocaleString()} ARS</span>
+          </div>
+          <span className="text-[11px] font-medium bg-white/70 px-2.5 py-1 rounded-lg border border-emerald-300">
+            Regla: No se puede sacar más plata de lo que hay
+          </span>
+        </div>
+
         {errorMsg && (
           <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-xs text-red-700">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -120,11 +146,24 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                 min={1}
                 value={monto}
                 onChange={(e) => setMonto(Number(e.target.value))}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-mono font-bold text-gray-900 focus:ring-2 focus:ring-[#0D472C]"
+                className={`w-full rounded-lg border px-3 py-2 text-xs font-mono font-bold focus:ring-2 ${
+                  tipo === 'Gasto' && monto > availableBalance
+                    ? 'border-red-500 bg-red-50 text-red-900 focus:ring-red-500'
+                    : 'border-gray-300 bg-white text-gray-900 focus:ring-[#0D472C]'
+                }`}
                 required
               />
             </div>
           </div>
+
+          {tipo === 'Gasto' && monto > availableBalance && (
+            <div className="rounded-lg bg-red-100 border border-red-300 p-2 text-xs text-red-800 font-bold flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-700" />
+              <span>
+                El monto ingresado ($ {monto.toLocaleString()}) supera el saldo disponible ($ {availableBalance.toLocaleString()}).
+              </span>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -222,7 +261,12 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 rounded-lg bg-[#0D472C] px-5 py-2 text-xs font-bold text-[#F9F6EC] hover:bg-[#165B3A] shadow-md transition cursor-pointer"
+              disabled={tipo === 'Gasto' && monto > availableBalance}
+              className={`flex items-center gap-1.5 rounded-lg px-5 py-2 text-xs font-bold shadow-md transition cursor-pointer ${
+                tipo === 'Gasto' && monto > availableBalance
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                  : 'bg-[#0D472C] text-[#F9F6EC] hover:bg-[#165B3A]'
+              }`}
             >
               <Check className="h-4 w-4" />
               Asentar en Balance Oficial

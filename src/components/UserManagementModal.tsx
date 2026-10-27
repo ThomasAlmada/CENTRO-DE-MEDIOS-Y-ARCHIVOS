@@ -236,13 +236,20 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   </label>
                   <select
                     value={role}
-                    onChange={(e) => setRole(e.target.value as UserRole)}
+                    onChange={(e) => {
+                      const newRole = e.target.value as UserRole;
+                      setRole(newRole);
+                      if (newRole === 'VISITANTE') {
+                        setPosition('Consulta Pública de Talleres y Cartelera');
+                      }
+                    }}
                     className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-[#0D472C] focus:ring-2 focus:ring-[#0D472C]"
                   >
-                    <option value="CARGADOR_DATOS">CARGADOR DE DATOS (Solo su área)</option>
-                    <option value="SOLICITANTE">SOLICITANTE (Pide insumos y carteles)</option>
+                    <option value="CARGADOR_DATOS">CARGADOR DE DATOS (Solo su área asignada)</option>
+                    <option value="SOLICITANTE">SOLICITANTE (Pedidos de su área)</option>
+                    <option value="SECRETARIO">SECRETARIO / ENCARGADO (Todos los folios)</option>
                     <option value="ADMIN">ADMIN (Coordinador General - Todo)</option>
-                    <option value="VISITANTE">VISITANTE (Consulta pública)</option>
+                    <option value="VISITANTE">VISITANTE (Sin área - Solo consulta)</option>
                   </select>
                 </div>
 
@@ -250,18 +257,27 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Rama Operativa / Equipo *
                   </label>
-                  <select
-                    value={assignedArea}
-                    onChange={(e) => setAssignedArea(e.target.value as OperativeArea)}
-                    disabled={role === 'VISITANTE'}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-[#0D472C]"
-                  >
-                    {OPERATIVE_AREAS.map((a) => (
-                      <option key={a.key} value={a.key}>
-                        {a.label}
-                      </option>
-                    ))}
-                  </select>
+                  {role === 'VISITANTE' ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-2 text-[11px] text-amber-900 font-semibold">
+                      Sin área asignada (Solo acceso público)
+                    </div>
+                  ) : role === 'ADMIN' || role === 'SECRETARIO' ? (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-[11px] text-emerald-950 font-semibold">
+                      Oficina Central (Todas las Áreas)
+                    </div>
+                  ) : (
+                    <select
+                      value={assignedArea}
+                      onChange={(e) => setAssignedArea(e.target.value as OperativeArea)}
+                      className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-[#0D472C]"
+                    >
+                      {OPERATIVE_AREAS.map((a) => (
+                        <option key={a.key} value={a.key}>
+                          {a.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 

@@ -69,13 +69,15 @@ export const Header: React.FC<HeaderProps> = ({
   const getRoleLabel = (role: UserRole) => {
     switch (role) {
       case 'ADMIN':
-        return { label: 'ADMINISTRADOR GENERAL', color: 'bg-emerald-950 text-emerald-200 border-emerald-800' };
+        return { label: '👑 COORDINADOR GENERAL', color: 'bg-emerald-950 text-amber-300 border-amber-400/40' };
+      case 'SECRETARIO':
+        return { label: 'SECRETARIO DE OFICINA', color: 'bg-emerald-800 text-white border-emerald-600' };
       case 'CARGADOR_DATOS':
-        return { label: 'CARGADOR DE DATOS', color: 'bg-emerald-900 text-white border-emerald-700' };
+        return { label: `CARGADOR (${currentUser.assignedArea?.split(' ')[0] || 'ÁREA'})`, color: 'bg-emerald-900 text-white border-emerald-700' };
       case 'SOLICITANTE':
-        return { label: 'SOLICITANTE POR ÁREA', color: 'bg-amber-900 text-amber-100 border-amber-800' };
+        return { label: `SOLICITANTE (${currentUser.assignedArea?.split(' ')[0] || 'ÁREA'})`, color: 'bg-amber-900 text-amber-100 border-amber-800' };
       case 'VISITANTE':
-        return { label: 'CONSULTA PÚBLICA', color: 'bg-stone-700 text-stone-100 border-stone-600' };
+        return { label: 'CONSULTA PÚBLICA (SIN ÁREA)', color: 'bg-stone-700 text-stone-100 border-stone-600' };
     }
   };
 

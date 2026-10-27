@@ -48,6 +48,7 @@ export interface OfficeFolioInfo {
 
 export type UserRole = 
   | 'ADMIN' 
+  | 'SECRETARIO'
   | 'CARGADOR_DATOS' 
   | 'SOLICITANTE' 
   | 'VISITANTE';
@@ -184,4 +185,100 @@ export interface OfficeEvent {
   esPublico: boolean;
   aficheUrl?: string;
   participantesEsperados: number;
+}
+
+// Custom Physical Shelves in the Office
+export interface OfficeShelf {
+  id: string;
+  numero: number;
+  nombre: string;
+  ubicacion: string; // e.g. "Sede Central - Pared Norte"
+  descripcion: string;
+  capacidadCarpetas: number;
+  foliosAsignados: OfficeFolioCategory[];
+  creadoEn: string;
+}
+
+// Institutional Inventory (Sede Central + Espacio Esperanza Somos Todos)
+export interface InstitutionalInventoryItem {
+  id: string;
+  codigo: string; // e.g. "INV-ESP-2024-001"
+  articulo: string;
+  personaQueInventaria: string;
+  dia: string; // e.g. "Lunes", "Martes"
+  fecha: string; // YYYY-MM-DD
+  hora: string; // HH:MM
+  espacioUbicacion: 'SEDE CENTRAL' | 'ESPACIO ESPERANZA SOMOS TODOS' | 'GALPÓN TALLERES' | 'CANCHA / EXTERIOR';
+  estanteAsignado?: string;
+  areaAsignada: OperativeArea | 'GENERAL INSTITUCIONAL';
+  categoria: 'Deportes' | 'Audio y Tecnología' | 'Mobiliario' | 'Arte y Pinturas' | 'Sanidad y Rescate' | 'Herramientas' | 'Varios';
+  cantidad: number;
+  estado: 'Excelente' | 'Bueno' | 'Regular' | 'A Reparar' | 'Baja';
+  observaciones: string;
+  registradoPorUsuario: string;
+}
+
+// Area Actas & Sessions
+export interface AreaActa {
+  id: string;
+  codigo: string; // e.g. "ACT-DEP-2024-01"
+  areaOperativa: OperativeArea;
+  titulo: string;
+  fecha: string;
+  horaInicio: string;
+  lugar: string;
+  temarioOrdenDelDia: string;
+  participantesPresentes: string[];
+  acuerdosYResoluciones: string;
+  redactadaPor: string;
+  firmadaPorAdmin: boolean;
+  adjuntoFotoUrl?: string;
+  creadaEn: string;
+}
+
+// Admin Notices and Alerts to Users
+export interface OfficeNotice {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  nivel: 'INFO' | 'IMPORTANTE' | 'URGENTE';
+  areaDestino: OperativeArea | 'TODAS';
+  creadoPor: string;
+  fecha: string;
+  hora: string;
+  activo: boolean;
+}
+
+// Area Inscription Forms (Torneos de fútbol, hockey, show de talentos, etc.)
+export interface AreaInscriptionForm {
+  id: string;
+  areaOperativa: OperativeArea;
+  titulo: string; // e.g. "Ficha de inscripción por equipo - Torneo de Fútbol 7"
+  deporteOActividad: string; // e.g. "Fútbol", "Hockey", "Talentos Artísticos", "Pintura"
+  nombreEvento: string; // e.g. "Copa Esperanza 2024"
+  fechaEvento: string;
+  lugarEvento: string;
+  montoInscripcion: number; // 0 for free
+  descripcion: string;
+  habilitada: boolean; // Admin can enable/disable
+  maxEquipos?: number;
+  creadaPor: string;
+  creadaEn: string;
+}
+
+export interface InscriptionSubmission {
+  id: string;
+  formId: string;
+  nombreEquipo: string;
+  areaOperativa: OperativeArea;
+  categoriaODivision: string;
+  nombreDelegadoOEncargado: string;
+  dniDelegado: string;
+  telefonoDelegado: string;
+  numeroParticipantes: number;
+  montoAbonado: number;
+  estadoPago: 'Pendiente' | 'Abonado' | 'Exento';
+  comprobanteFolio?: string;
+  fechaInscripcion: string;
+  notas: string;
 }

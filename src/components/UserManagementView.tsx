@@ -274,32 +274,55 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                 </label>
                 <select
                   value={role}
-                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  onChange={(e) => {
+                    const newRole = e.target.value as UserRole;
+                    setRole(newRole);
+                    if (newRole === 'VISITANTE') {
+                      setPosition('Consulta Pública de Talleres y Cartelera');
+                    }
+                  }}
                   className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-bold text-[#0D472C] focus:ring-2 focus:ring-[#0D472C]"
                 >
-                  <option value="CARGADOR_DATOS">CARGADOR DE DATOS (Solo su área asignada)</option>
-                  <option value="SOLICITANTE">SOLICITANTE (Pide insumos y cartelería)</option>
-                  <option value="ADMIN">ADMINISTRADOR GENERAL (Acceso total)</option>
-                  <option value="VISITANTE">VISITANTE (Consulta pública)</option>
+                  <option value="CARGADOR_DATOS">CARGADOR DE DATOS (Solo su área operativa asignada)</option>
+                  <option value="SOLICITANTE">SOLICITANTE (Pedidos de su área operativa)</option>
+                  <option value="SECRETARIO">SECRETARIO / ENCARGADO (Acceso a todos los folios y archivos)</option>
+                  <option value="ADMIN">ADMINISTRADOR GENERAL (Acceso y control total - Almada E. Thomas)</option>
+                  <option value="VISITANTE">VISITANTE (Sin área - Solo consulta pública)</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Área Operativa / Equipo *
+                  Área Operativa Asignada *
                 </label>
-                <select
-                  value={assignedArea}
-                  onChange={(e) => setAssignedArea(e.target.value as OperativeArea)}
-                  disabled={role === 'VISITANTE'}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#0D472C] focus:ring-2 focus:ring-[#0D472C]"
-                >
-                  {OPERATIVE_AREAS.map((a) => (
-                    <option key={a.key} value={a.key}>
-                      {a.label}
-                    </option>
-                  ))}
-                </select>
+                {role === 'VISITANTE' ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900 font-medium">
+                    <span className="font-bold block">Sin área asignada</span>
+                    <span className="text-[11px] text-amber-800">El rol visitante no pertenece a ningún área operativa y solo accede a documentos públicos y cartelera comunitaria.</span>
+                  </div>
+                ) : role === 'ADMIN' || role === 'SECRETARIO' ? (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs text-emerald-950 font-medium">
+                    <span className="font-bold block">Oficina Central (Todas las Áreas)</span>
+                    <span className="text-[11px] text-emerald-800">Acceso institucional a los 15 folios, actas y correspondencia general.</span>
+                  </div>
+                ) : (
+                  <div>
+                    <select
+                      value={assignedArea}
+                      onChange={(e) => setAssignedArea(e.target.value as OperativeArea)}
+                      className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-[#0D472C] focus:ring-2 focus:ring-[#0D472C]"
+                    >
+                      {OPERATIVE_AREAS.map((a) => (
+                        <option key={a.key} value={a.key}>
+                          {a.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      El usuario solo podrá ver y gestionar información perteneciente a esta área.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -404,19 +427,31 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                       <span
                         className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${
                           u.role === 'ADMIN'
-                            ? 'bg-emerald-950 text-emerald-200'
+                            ? 'bg-emerald-950 text-amber-300 border border-amber-400/40'
+                            : u.role === 'SECRETARIO'
+                            ? 'bg-emerald-900 text-emerald-100'
                             : u.role === 'CARGADOR_DATOS'
                             ? 'bg-emerald-100 text-emerald-800'
                             : u.role === 'SOLICITANTE'
                             ? 'bg-amber-100 text-amber-800'
-                            : 'bg-stone-100 text-stone-700'
+                            : 'bg-stone-100 text-stone-600'
                         }`}
                       >
-                        {u.role}
+                        {u.role === 'ADMIN' ? '👑 ADMIN GENERAL' :
+                         u.role === 'SECRETARIO' ? 'SECRETARIO OFICINA' :
+                         u.role === 'CARGADOR_DATOS' ? 'CARGADOR DE ÁREA' :
+                         u.role === 'SOLICITANTE' ? 'SOLICITANTE' :
+                         'VISITANTE PÚBLICO'}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-gray-800">
-                      {u.assignedArea || 'General'}
+                    <td className="p-3 text-xs">
+                      {u.role === 'VISITANTE' ? (
+                        <span className="text-gray-400 italic text-[11px]">— Sin Área (Público) —</span>
+                      ) : u.role === 'ADMIN' || u.role === 'SECRETARIO' ? (
+                        <span className="font-bold text-[#0D472C] text-[11px]">Oficina Central (Todas)</span>
+                      ) : (
+                        <span className="font-semibold text-gray-800 text-[11px]">{u.assignedArea}</span>
+                      )}
                     </td>
                     <td className="p-3 text-[11px] text-gray-500">
                       <div>{u.position}</div>

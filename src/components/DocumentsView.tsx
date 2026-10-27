@@ -22,6 +22,12 @@ import {
   UserProfile 
 } from '../types';
 import { OPERATIVE_AREAS, ADMINISTRATIVE_TYPES } from '../data/mockData';
+import { 
+  canUserViewDocument, 
+  canUserEditDocument, 
+  canUserDeleteDocument, 
+  isSecretarioOrAdmin 
+} from '../utils/permissions';
 
 interface DocumentsViewProps {
   documents: ArchiveDocument[];
@@ -42,7 +48,12 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
   onDeleteDoc,
   onPrintFolio,
 }) => {
-  const [selectedArea, setSelectedArea] = useState<OperativeArea | 'TODAS'>(initialAreaFilter);
+  // If user is restricted to an area, default to that area
+  const defaultArea = (!isSecretarioOrAdmin(currentUser) && currentUser.assignedArea) 
+    ? currentUser.assignedArea 
+    : initialAreaFilter;
+
+  const [selectedArea, setSelectedArea] = useState<OperativeArea | 'TODAS'>(defaultArea);
   const [selectedType, setSelectedType] = useState<AdministrativeType | 'TODOS'>('TODOS');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>('TODOS');
@@ -55,16 +66,11 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
     return Array.from(set).sort((a, b) => b - a);
   }, [documents]);
 
-  // Filtered documents
+  // Filtered documents strictly enforcing "NO TODOS VEN TODO"
   const filteredDocs = useMemo(() => {
     return documents.filter((doc) => {
-      // Role restrictions:
-      // CARGADOR_DATOS can only see/edit their assigned area if restricted, but let's allow seeing public/internal, while restricting editing
-      if (currentUser.role === 'CARGADOR_DATOS' && currentUser.assignedArea) {
-        // If they chose their area or want to focus on their work
-      }
-
-      if (currentUser.role === 'VISITANTE' && doc.visibilidad !== 'Público') {
+      // 1. Strict user-level access check
+      if (!canUserViewDocument(currentUser, doc)) {
         return false;
       }
 
@@ -100,13 +106,8 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
     });
   }, [documents, selectedArea, selectedType, selectedYear, selectedSupport, searchQuery, currentUser]);
 
-  const canEdit = (doc: ArchiveDocument) => {
-    if (currentUser.role === 'ADMIN') return true;
-    if (currentUser.role === 'CARGADOR_DATOS' && currentUser.assignedArea === doc.areaOperativa) return true;
-    return false;
-  };
-
-  const canDelete = currentUser.role === 'ADMIN';
+  const canEdit = (doc: ArchiveDocument) => canUserEditDocument(currentUser, doc);
+  const canDelete = canUserDeleteDocument(currentUser);
 
   return (
     <div className="space-y-6">
@@ -153,18 +154,29 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
             <label className="block text-[11px] font-bold text-[#0D472C] uppercase mb-1">
               Rama Operativa (Gente)
             </label>
-            <select
-              value={selectedArea}
-              onChange={(e) => setSelectedArea(e.target.value as any)}
-              className="w-full rounded-lg border border-gray-300 bg-white p-2 font-medium focus:ring-2 focus:ring-[#0D472C]"
-            >
-              <option value="TODAS">Todas las Áreas Operativas</option>
-              {OPERATIVE_AREAS.map((a) => (
-                <option key={a.key} value={a.key}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
+            {currentUser.role === 'VISITANTE' ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs font-bold text-amber-900">
+                Consulta Pública (Sin Área)
+              </div>
+            ) : !isSecretarioOrAdmin(currentUser) && currentUser.assignedArea ? (
+              <div className="rounded-lg border border-[#0D472C]/30 bg-emerald-50 p-2 text-xs font-bold text-[#0D472C]">
+                {currentUser.assignedArea}
+                <span className="block text-[10px] text-gray-500 font-normal">Filtro exclusivo de su área</span>
+              </div>
+            ) : (
+              <select
+                value={selectedArea}
+                onChange={(e) => setSelectedArea(e.target.value as any)}
+                className="w-full rounded-lg border border-gray-300 bg-white p-2 font-medium focus:ring-2 focus:ring-[#0D472C]"
+              >
+                <option value="TODAS">Todas las Áreas Operativas</option>
+                {OPERATIVE_AREAS.map((a) => (
+                  <option key={a.key} value={a.key}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* 2. Rama Administrativa */}

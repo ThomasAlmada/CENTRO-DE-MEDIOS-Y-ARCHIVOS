@@ -1,17 +1,22 @@
-import React from 'react';
 import { 
-  LayoutDashboard, 
+  Home,
+  Building2,
+  Folder, 
+  Package, 
+  Layers,
+  Bell,
+  ClipboardList,
   FileText, 
   Users, 
-  Package, 
   SendHorizontal, 
   Coins, 
   Calendar, 
   QrCode,
   Lock,
-  Folder
+  UserCheck
 } from 'lucide-react';
 import { UserProfile } from '../types';
+import { canUserAccessTab } from '../utils/permissions';
 
 interface NavigationProps {
   currentTab: string;
@@ -30,66 +35,96 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const tabs = [
     {
+      id: 'home',
+      label: 'Inicio',
+      icon: Home,
+      description: 'Panel central institucional',
+    },
+    {
+      id: 'my_area',
+      label: currentUser.role === 'ADMIN' ? 'Gestión de Áreas' : 'Mi Área',
+      icon: Building2,
+      description: 'Actas, materiales, pedidos y papeles',
+    },
+    {
       id: 'shelves',
-      label: '📁 15 Folios de Estantes',
+      label: '15 Folios',
       icon: Folder,
       description: 'Papeles en estantes físicos',
     },
     {
-      id: 'dashboard',
-      label: 'Tablero General',
-      icon: LayoutDashboard,
-      description: 'Métricas por área',
+      id: 'institutional_inventory',
+      label: 'Inventario Sede',
+      icon: Package,
+      description: 'Sede Central y Espacio Esperanza',
+    },
+    {
+      id: 'shelves_mgmt',
+      label: 'Estantes Físicos',
+      icon: Layers,
+      description: 'Organización de estantes 1, 2, 3...',
+    },
+    {
+      id: 'notices',
+      label: 'Avisos & Alertas',
+      icon: Bell,
+      description: 'Comunicaciones de Coordinación',
+    },
+    {
+      id: 'inscriptions',
+      label: 'Convocatorias',
+      icon: ClipboardList,
+      description: 'Inscripción por equipos y talleres',
     },
     {
       id: 'documents',
-      label: 'Archivo Documental',
+      label: 'Archivo',
       icon: FileText,
-      description: 'Foliado y estantes',
+      description: 'Buscador y foliado documental',
     },
     {
       id: 'kids',
-      label: 'Fichas de Niñez',
+      label: 'Niñez',
       icon: Users,
       description: 'Padrón y tutores',
     },
     {
       id: 'inventory',
-      label: 'Inventario & Préstamos',
+      label: 'Préstamos',
       icon: Package,
       badge: activeLoansCount > 0 ? `${activeLoansCount}` : undefined,
-      description: 'Firma digital',
+      description: 'Firma digital de retiros',
     },
     {
       id: 'requests',
-      label: 'Solicitudes por Área',
+      label: 'Pedidos',
       icon: SendHorizontal,
       badge: pendingRequestsCount > 0 ? `${pendingRequestsCount}` : undefined,
-      description: 'Pedidos internos',
+      description: 'Solicitudes de insumos',
     },
     {
       id: 'budget',
-      label: 'Presupuesto & Balance',
+      label: 'Balance & Caja',
       icon: Coins,
       adminOnly: true,
-      description: 'Exclusivo Admin',
+      description: 'Exclusivo Coordinación General',
     },
     {
       id: 'calendar',
-      label: 'Calendario & Cartelera',
+      label: 'Calendario',
       icon: Calendar,
       description: 'Eventos comunitarios',
     },
     {
       id: 'qr_lookup',
-      label: 'Localizador QR',
+      label: 'QR Estante',
       icon: QrCode,
-      description: 'Buscador de estante',
+      description: 'Buscador de estante físico',
     },
     {
       id: 'users',
-      label: 'Personal & Roles',
-      icon: Users,
+      label: 'Personal',
+      icon: UserCheck,
       adminOnly: true,
       description: 'Alta y control de usuarios',
     },
@@ -99,13 +134,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     <nav className="bg-[#FFFDF8] border-b border-[#0D472C]/20 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 flex items-center overflow-x-auto py-2 gap-1.5 scrollbar-none">
         {tabs.map((tab) => {
-          // If role is VISITANTE, hide budget and requests
-          if (currentUser.role === 'VISITANTE' && (tab.id === 'budget' || tab.id === 'requests')) {
-            return null;
-          }
-
-          // If role is CARGADOR_DATOS or SOLICITANTE, hide budget
-          if (currentUser.role !== 'ADMIN' && tab.adminOnly) {
+          // Check permissions for this tab
+          if (!canUserAccessTab(currentUser, tab.id)) {
             return null;
           }
 

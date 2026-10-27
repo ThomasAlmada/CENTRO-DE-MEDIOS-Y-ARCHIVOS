@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   Camera, 
@@ -13,8 +13,9 @@ import {
   Eye,
   Trash2
 } from 'lucide-react';
-import { ArchiveDocument, UserProfile, OfficeFolioCategory } from '../types';
+import { ArchiveDocument, UserProfile, OfficeFolioCategory, OfficeFolioInfo } from '../types';
 import { OFFICE_SHELF_FOLIOS } from '../data/mockData';
+import { canUserUploadToFolio, getAllowedFoliosForUser, isSecretarioOrAdmin } from '../utils/permissions';
 
 interface DigitizePaperModalProps {
   isOpen: boolean;
@@ -31,7 +32,19 @@ export const DigitizePaperModal: React.FC<DigitizePaperModalProps> = ({
   currentUser,
   initialFolio = 'Actas y reuniones',
 }) => {
-  const [selectedFolio, setSelectedFolio] = useState<OfficeFolioCategory>(initialFolio);
+  const allowedUploadFolios = useMemo(() => {
+    return OFFICE_SHELF_FOLIOS.filter((f) => canUserUploadToFolio(currentUser, f.name));
+  }, [currentUser]);
+
+  // Ensure default folio is allowed for this user
+  const effectiveInitialFolio = useMemo(() => {
+    if (canUserUploadToFolio(currentUser, initialFolio)) {
+      return initialFolio;
+    }
+    return allowedUploadFolios[0]?.name || 'Carteles';
+  }, [initialFolio, allowedUploadFolios, currentUser]);
+
+  const [selectedFolio, setSelectedFolio] = useState<OfficeFolioCategory>(effectiveInitialFolio);
   const [titulo, setTitulo] = useState('');
   const [numeroHoja, setNumeroHoja] = useState('Folio 01');
   const [estanteFisico, setEstanteFisico] = useState('');
@@ -43,14 +56,14 @@ export const DigitizePaperModal: React.FC<DigitizePaperModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Update shelf whenever folio changes
+  // Update shelf whenever folio changes or modal opens
   useEffect(() => {
-    setSelectedFolio(initialFolio);
-    const folioInfo = OFFICE_SHELF_FOLIOS.find((f) => f.name === initialFolio);
+    setSelectedFolio(effectiveInitialFolio);
+    const folioInfo = OFFICE_SHELF_FOLIOS.find((f) => f.name === effectiveInitialFolio);
     if (folioInfo) {
       setEstanteFisico(folioInfo.estanteDefault);
     }
-  }, [initialFolio, isOpen]);
+  }, [effectiveInitialFolio, isOpen]);
 
   const handleFolioChange = (folioName: OfficeFolioCategory) => {
     setSelectedFolio(folioName);
@@ -244,11 +257,18 @@ export const DigitizePaperModal: React.FC<DigitizePaperModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* STEP 1: SELECT FOLIO */}
           <div>
-            <label className="block text-xs font-bold text-[#0D472C] uppercase tracking-wider mb-1.5">
-              1. Seleccione el Folio de los Estantes *
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-[#0D472C] uppercase tracking-wider">
+                1. Seleccione el Folio de los Estantes *
+              </label>
+              <span className="text-[10px] font-bold text-gray-500">
+                {isSecretarioOrAdmin(currentUser) 
+                  ? 'Coordinación: 15 folios disponibles' 
+                  : `Habilitados para ${currentUser.assignedArea}: ${allowedUploadFolios.length} folios`}
+              </span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto p-1.5 bg-[#FAF7F0] rounded-xl border border-gray-300">
-              {OFFICE_SHELF_FOLIOS.map((folio) => {
+              {allowedUploadFolios.map((folio: OfficeFolioInfo) => {
                 const isSelected = selectedFolio === folio.name;
                 return (
                   <button

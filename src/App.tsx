@@ -26,7 +26,8 @@ import { CalendarView } from './components/CalendarView';
 import { QRLookupView } from './components/QRLookupView';
 import { OfficeShelvesView } from './components/OfficeShelvesView';
 import { DigitizePaperModal } from './components/DigitizePaperModal';
-import { OfficeFolioCategory } from './types';
+import { OfficeFolioCategory, OfficeNotice } from './types';
+import { INITIAL_NOTICES } from './data/mockData';
 
 // Modals
 import { DocumentModal } from './components/DocumentModal';
@@ -37,20 +38,28 @@ import { ReturnLoanModal } from './components/ReturnLoanModal';
 import { RequestModal } from './components/RequestModal';
 import { BudgetModal } from './components/BudgetModal';
 
+// New Real Office Management Views
+import { HomeHubView } from './components/HomeHubView';
+import { AreaManagementView } from './components/AreaManagementView';
+import { InstitutionalInventoryView } from './components/InstitutionalInventoryView';
+import { ShelvesManagementView } from './components/ShelvesManagementView';
+import { NoticesAlertsView } from './components/NoticesAlertsView';
+import { AreaFormsView } from './components/AreaFormsView';
+
 export default function App() {
   // Authentication session
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageService.getActiveSession());
   const [allUsers, setAllUsers] = useState<UserProfile[]>(() => StorageService.getUsers());
 
-  // Navigation tab (starts directly at the 15 Folios on the Shelves)
-  const [currentTab, setCurrentTab] = useState<string>('shelves');
+  // Navigation tab (starts at central home hub)
+  const [currentTab, setCurrentTab] = useState<string>('home');
   const [activeAreaFilter, setActiveAreaFilter] = useState<OperativeArea | 'TODAS'>('TODAS');
 
   // Digitize paper modal states
   const [isDigitizeModalOpen, setIsDigitizeModalOpen] = useState(false);
   const [digitizeTargetFolio, setDigitizeTargetFolio] = useState<OfficeFolioCategory>('Actas y reuniones');
 
-  // Archive data
+  // Archive and operational data
   const [documents, setDocuments] = useState<ArchiveDocument[]>(() => StorageService.getDocuments());
   const [kids, setKids] = useState<KidProfile[]>(() => StorageService.getKids());
   const [inventory, setInventory] = useState<InventoryItem[]>(() => StorageService.getInventory());
@@ -58,6 +67,21 @@ export default function App() {
   const [requests, setRequests] = useState<AreaRequest[]>(() => StorageService.getRequests());
   const [budget, setBudget] = useState<BudgetRecord[]>(() => StorageService.getBudget());
   const [events, setEvents] = useState<OfficeEvent[]>(() => StorageService.getEvents());
+  const [notices, setNotices] = useState<OfficeNotice[]>(() => {
+    try {
+      if (typeof StorageService.getNotices === 'function') {
+        return StorageService.getNotices();
+      }
+    } catch (e) {
+      console.warn('StorageService.getNotices fallback:', e);
+    }
+    return INITIAL_NOTICES;
+  });
+
+  // Strict Balance Calculation: "No se puede sacar más plata de lo que hay"
+  const totalIngresos = budget.filter((b) => b.tipo === 'Ingreso').reduce((acc, curr) => acc + curr.monto, 0);
+  const totalGastos = budget.filter((b) => b.tipo === 'Gasto').reduce((acc, curr) => acc + curr.monto, 0);
+  const availableBalance = Math.max(0, totalIngresos - totalGastos);
 
   // Modal states
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
@@ -91,6 +115,10 @@ export default function App() {
   const handleLoginSuccess = (user: UserProfile) => {
     setCurrentUser(user);
     setAllUsers(StorageService.getUsers());
+    if (typeof StorageService.getNotices === 'function') {
+      setNotices(StorageService.getNotices());
+    }
+    setCurrentTab('home');
     showToast(`Bienvenido a la oficina, ${user.name}`);
   };
 
@@ -181,9 +209,13 @@ export default function App() {
     showToast(`Pedido ${req.codigo}: marcado como ${status}`);
   };
 
-  // Budget actions
+  // Budget actions with strict balance restriction
   const handleSaveBudget = (record: BudgetRecord) => {
     if (!currentUser) return;
+    if (record.tipo === 'Gasto' && record.monto > availableBalance) {
+      showToast(`⚠️ Error: Fondos insuficientes. El saldo disponible es de $${availableBalance.toLocaleString()} ARS.`);
+      return;
+    }
     const updated = StorageService.saveBudgetRecord(record, currentUser);
     setBudget(updated);
     showToast(`Asiento contable registrado: $${record.monto.toLocaleString()}`);
@@ -298,6 +330,39 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="grow max-w-7xl w-full mx-auto px-4 py-6">
+        {currentTab === 'home' && (
+          <HomeHubView
+            currentUser={currentUser}
+            notices={notices}
+            onNavigateTab={setCurrentTab}
+            availableBalance={availableBalance}
+          />
+        )}
+
+        {currentTab === 'my_area' && (
+          <AreaManagementView
+            currentUser={currentUser}
+            onOpenDigitizeFolio={(initialArea) => {
+              if (initialArea === 'DEPORTES Y ACCIÓN SOCIAL') {
+                setDigitizeTargetFolio('Deportes');
+              } else if (initialArea === 'CULTURA Y EVENTOS') {
+                setDigitizeTargetFolio('Cultura y eventos');
+              } else if (initialArea === 'AMBIENTE Y PROTECCIÓN ANIMAL') {
+                setDigitizeTargetFolio('Ambiente y proteccion animal');
+              } else if (initialArea === 'PRENSA, REDES Y COMUNICACIÓN') {
+                setDigitizeTargetFolio('Prensa redes y comunicacion');
+              } else {
+                setDigitizeTargetFolio('Actas y reuniones');
+              }
+              setIsDigitizeModalOpen(true);
+            }}
+            onViewDocDetail={(doc) => {
+              setEditingDoc(doc);
+              setIsDocModalOpen(true);
+            }}
+          />
+        )}
+
         {currentTab === 'shelves' && (
           <OfficeShelvesView
             documents={documents}
@@ -315,6 +380,22 @@ export default function App() {
               setIsDocModalOpen(true);
             }}
           />
+        )}
+
+        {currentTab === 'institutional_inventory' && (
+          <InstitutionalInventoryView currentUser={currentUser} />
+        )}
+
+        {currentTab === 'shelves_mgmt' && (
+          <ShelvesManagementView currentUser={currentUser} />
+        )}
+
+        {currentTab === 'notices' && (
+          <NoticesAlertsView currentUser={currentUser} />
+        )}
+
+        {currentTab === 'inscriptions' && (
+          <AreaFormsView currentUser={currentUser} />
         )}
 
         {currentTab === 'dashboard' && (
@@ -516,6 +597,7 @@ export default function App() {
         isOpen={isBudgetModalOpen}
         onClose={() => setIsBudgetModalOpen(false)}
         currentUser={currentUser}
+        availableBalance={availableBalance}
         onSubmit={handleSaveBudget}
       />
 
