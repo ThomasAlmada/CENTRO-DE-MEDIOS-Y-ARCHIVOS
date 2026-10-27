@@ -31,6 +31,7 @@ export const AreaFormsView: React.FC<AreaFormsViewProps> = ({
   currentUser,
 }) => {
   const isAdmin = currentUser.role === 'ADMIN';
+  const canViewSubmissions = currentUser.role === 'ADMIN' || currentUser.role === 'CARGADOR_DATOS';
 
   const [forms, setForms] = useState<AreaInscriptionForm[]>(() => StorageService.getInscriptionForms());
   const [submissions, setSubmissions] = useState<InscriptionSubmission[]>(() => StorageService.getInscriptionSubmissions());
@@ -565,22 +566,28 @@ export const AreaFormsView: React.FC<AreaFormsViewProps> = ({
               </div>
 
               {/* Inscriptions Accordion */}
-              <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+              <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-xs font-bold text-gray-700">
                   Equipos / Participantes Inscriptos: <strong>{formSubs.length}</strong>
                 </span>
 
-                <button
-                  onClick={() => setSelectedFormForSubmissions(isExpanded ? null : form.id)}
-                  className="flex items-center gap-1 text-xs text-[#0369A1] font-bold hover:underline cursor-pointer"
-                >
-                  <span>{isExpanded ? 'Ocultar Planilla' : 'Ver Lista de Inscriptos'}</span>
-                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </button>
+                {canViewSubmissions ? (
+                  <button
+                    onClick={() => setSelectedFormForSubmissions(isExpanded ? null : form.id)}
+                    className="flex items-center gap-1 text-xs text-[#0369A1] font-bold hover:underline cursor-pointer"
+                  >
+                    <span>{isExpanded ? 'Ocultar Planilla' : 'Ver Planilla de Inscriptos'}</span>
+                    {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-gray-500 font-semibold bg-gray-100 px-2.5 py-1 rounded-lg">
+                    🔒 Planilla de inscriptos exclusiva para Coordinación y Cargador de Datos
+                  </span>
+                )}
               </div>
 
-              {/* Submissions Table when expanded */}
-              {isExpanded && (
+              {/* Submissions Table when expanded (only for authorized users) */}
+              {isExpanded && canViewSubmissions && (
                 <div className="mt-3 overflow-x-auto rounded-2xl border border-gray-200">
                   {formSubs.length === 0 ? (
                     <div className="p-6 text-center text-xs text-gray-400">

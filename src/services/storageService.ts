@@ -35,22 +35,22 @@ import {
 } from '../data/mockData';
 
 const STORAGE_KEYS = {
-  DOCUMENTS: 'cma_pe_documents_v2',
-  KIDS: 'cma_pe_kids_v2',
-  INVENTORY: 'cma_pe_inventory_v2',
-  LOANS: 'cma_pe_loans_v2',
-  REQUESTS: 'cma_pe_requests_v2',
-  BUDGET: 'cma_pe_budget_v2',
-  EVENTS: 'cma_pe_events_v2',
-  USERS: 'cma_pe_users_v2',
-  ACTIVE_SESSION: 'cma_pe_session_v2',
-  AUDIT_LOGS: 'cma_pe_audit_v2',
-  SHELVES: 'cma_pe_shelves_v2',
-  INST_INVENTORY: 'cma_pe_inst_inventory_v2',
-  AREA_ACTAS: 'cma_pe_area_actas_v2',
-  NOTICES: 'cma_pe_notices_v2',
-  INSCRIPTION_FORMS: 'cma_pe_insc_forms_v2',
-  INSCRIPTION_SUBS: 'cma_pe_insc_subs_v2',
+  DOCUMENTS: 'cma_pe_documents_v5_prod',
+  KIDS: 'cma_pe_kids_v5_prod',
+  INVENTORY: 'cma_pe_inventory_v5_prod',
+  LOANS: 'cma_pe_loans_v5_prod',
+  REQUESTS: 'cma_pe_requests_v5_prod',
+  BUDGET: 'cma_pe_budget_v5_prod',
+  EVENTS: 'cma_pe_events_v5_prod',
+  USERS: 'cma_pe_users_v5_prod',
+  ACTIVE_SESSION: 'cma_pe_session_v5_prod',
+  AUDIT_LOGS: 'cma_pe_audit_v5_prod',
+  SHELVES: 'cma_pe_shelves_v5_prod',
+  INST_INVENTORY: 'cma_pe_inst_inventory_v5_prod',
+  AREA_ACTAS: 'cma_pe_area_actas_v5_prod',
+  NOTICES: 'cma_pe_notices_v5_prod',
+  INSCRIPTION_FORMS: 'cma_pe_insc_forms_v5_prod',
+  INSCRIPTION_SUBS: 'cma_pe_insc_subs_v5_prod',
 };
 
 export interface AuditLogEntry {
@@ -355,6 +355,17 @@ export class StorageService {
     return updated;
   }
 
+  static deleteEvent(eventId: string, user: UserProfile): OfficeEvent[] {
+    const list = this.getEvents();
+    const target = list.find((e) => e.id === eventId);
+    const updated = list.filter((e) => e.id !== eventId);
+    this.setItem(STORAGE_KEYS.EVENTS, updated);
+    if (target) {
+      this.addAuditLog(user, 'Eliminación Evento', `${target.titulo} (${target.fecha})`);
+    }
+    return updated;
+  }
+
   // ================= AUDIT LOGS =================
   static getAuditLogs(): AuditLogEntry[] {
     return this.getItem<AuditLogEntry[]>(STORAGE_KEYS.AUDIT_LOGS, [
@@ -506,10 +517,10 @@ export class StorageService {
     if (existingIndex >= 0) {
       updated = [...list];
       updated[existingIndex] = acta;
-      this.addAuditLog(user, 'Edición de Acta de Área', `${acta.numeroActa}: ${acta.titulo}`);
+      this.addAuditLog(user, 'Edición de Acta de Área', `${acta.codigo}: ${acta.titulo}`);
     } else {
       updated = [acta, ...list];
-      this.addAuditLog(user, 'Creación de Acta de Área', `${acta.numeroActa}: ${acta.titulo} (${acta.areaOperativa})`);
+      this.addAuditLog(user, 'Creación de Acta de Área', `${acta.codigo}: ${acta.titulo} (${acta.areaOperativa})`);
     }
     this.setItem(STORAGE_KEYS.AREA_ACTAS, updated);
     return updated;
@@ -583,7 +594,7 @@ export class StorageService {
 
   static toggleInscriptionForm(formId: string, user: UserProfile): AreaInscriptionForm[] {
     const list = this.getInscriptionForms();
-    const updated = list.map((f) => (f.id === formId ? { ...f, activa: !f.activa } : f));
+    const updated = list.map((f) => (f.id === formId ? { ...f, habilitada: !f.habilitada } : f));
     this.setItem(STORAGE_KEYS.INSCRIPTION_FORMS, updated);
     this.addAuditLog(user, 'Alternar Estado Convocatoria', `Convocatoria ID ${formId} alternada`);
     return updated;
@@ -607,7 +618,7 @@ export class StorageService {
     const updated = [sub, ...list];
     this.setItem(STORAGE_KEYS.INSCRIPTION_SUBS, updated);
     if (user) {
-      this.addAuditLog(user, 'Registro de Inscripción', `Inscripción cargada para formulario ${sub.formularioId}`);
+      this.addAuditLog(user, 'Registro de Inscripción', `Inscripción cargada para formulario ${sub.formId}`);
     }
     return updated;
   }

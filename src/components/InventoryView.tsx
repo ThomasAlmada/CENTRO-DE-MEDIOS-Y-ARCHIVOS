@@ -37,6 +37,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [selectedArea, setSelectedArea] = useState<OperativeArea | 'TODAS'>(initialAreaFilter);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const canViewAllLoans = currentUser.role === 'ADMIN' || currentUser.role === 'CARGADOR_DATOS';
+
   // Filter inventory
   const filteredStock = inventory.filter((item) => {
     if (selectedArea !== 'TODAS' && item.areaOperativa !== selectedArea) return false;
@@ -51,8 +53,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     return true;
   });
 
-  // Filter loans
+  // Filter loans - strictly personal for standard users as requested
   const filteredLoans = loans.filter((loan) => {
+    if (!canViewAllLoans) {
+      const matchName = loan.solicitanteNombre.toLowerCase().includes(currentUser.name.toLowerCase());
+      const matchDni = Boolean(loan.solicitanteDni && loan.solicitanteDni === currentUser.username);
+      if (!matchName && !matchDni) return false;
+    }
     if (selectedArea !== 'TODAS' && loan.areaOperativa !== selectedArea) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -232,6 +239,21 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {/* VIEW B: ACTAS DE PRÉSTAMOS CON FIRMA DIGITAL */}
       {activeTab === 'loans' && (
         <div className="space-y-4">
+          {!canViewAllLoans && (
+            <div className="rounded-2xl border-2 border-emerald-600/30 bg-[#E8F3ED] p-4 text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="font-bold block text-sm text-[#0D472C]">🔒 Historial Personal de Préstamos</span>
+                <span className="text-gray-600">Visualizando únicamente los materiales solicitados por ti ({currentUser.name}). El apartado completo y la gestión de todos los préstamos está a cargo de Coordinación y Cargador de Datos.</span>
+              </div>
+              <button
+                onClick={onOpenNewLoan}
+                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-[#0D472C] px-3.5 py-2 text-xs font-bold text-white shadow hover:bg-[#165B3A] transition cursor-pointer self-start sm:self-auto"
+              >
+                <PenTool className="h-4 w-4" />
+                <span>Pedir Material</span>
+              </button>
+            </div>
+          )}
           {filteredLoans.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-[#0D472C]/30 bg-white p-12 text-center">
               <Package className="mx-auto h-12 w-12 text-gray-400" />

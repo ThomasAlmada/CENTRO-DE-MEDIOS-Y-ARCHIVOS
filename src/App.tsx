@@ -45,6 +45,7 @@ import { InstitutionalInventoryView } from './components/InstitutionalInventoryV
 import { ShelvesManagementView } from './components/ShelvesManagementView';
 import { NoticesAlertsView } from './components/NoticesAlertsView';
 import { AreaFormsView } from './components/AreaFormsView';
+import { canUserAccessTab } from './utils/permissions';
 
 export default function App() {
   // Authentication session
@@ -54,6 +55,13 @@ export default function App() {
   // Navigation tab (starts at central home hub)
   const [currentTab, setCurrentTab] = useState<string>('home');
   const [activeAreaFilter, setActiveAreaFilter] = useState<OperativeArea | 'TODAS'>('TODAS');
+
+  // Guard navigation against unauthorized tab URLs/states
+  useEffect(() => {
+    if (currentUser && !canUserAccessTab(currentUser, currentTab)) {
+      setCurrentTab('home');
+    }
+  }, [currentUser, currentTab]);
 
   // Digitize paper modal states
   const [isDigitizeModalOpen, setIsDigitizeModalOpen] = useState(false);
@@ -494,6 +502,7 @@ export default function App() {
           <CalendarView
             events={events}
             currentUser={currentUser}
+            onEventsUpdated={(updated) => setEvents(updated)}
           />
         )}
 

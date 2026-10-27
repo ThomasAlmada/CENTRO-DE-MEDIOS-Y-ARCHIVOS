@@ -62,6 +62,8 @@ export const KidsView: React.FC<KidsViewProps> = ({
     });
   }, [kids, selectedArea, statusFilter, authFilter, searchQuery]);
 
+  const canViewFullList = currentUser.role === 'ADMIN' || currentUser.role === 'CARGADOR_DATOS';
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -71,33 +73,59 @@ export const KidsView: React.FC<KidsViewProps> = ({
             Fichas de Niñez y Adolescencia
           </h2>
           <p className="text-xs text-gray-600">
-            Padrón unificado de participantes vinculados a las áreas operativas con estado de autorización física
+            {canViewFullList 
+              ? 'Padrón unificado de participantes vinculados a las áreas operativas con estado de autorización física'
+              : 'Inscripción de niños y adolescentes a eventos específicos del área operativa'}
           </p>
         </div>
 
-        {currentUser.role !== 'VISITANTE' && (
-          <button
-            onClick={onOpenNewKid}
-            className="flex items-center gap-1.5 rounded-lg bg-[#0D472C] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#165B3A] transition cursor-pointer self-start sm:self-auto"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Inscribir Nuevo Niño/a</span>
-          </button>
-        )}
+        <button
+          onClick={onOpenNewKid}
+          className="flex items-center gap-1.5 rounded-lg bg-[#0D472C] px-4 py-2 text-xs font-bold text-white shadow hover:bg-[#165B3A] transition cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Inscribir Niño/a a Evento de Área</span>
+        </button>
       </div>
 
-      {/* Filter controls */}
-      <div className="rounded-2xl border border-[#0D472C]/20 bg-white p-4 shadow-xs space-y-3">
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por nombre, apellido, DNI o tutor..."
-            className="w-full rounded-xl border border-gray-300 bg-[#FFFDF8] pl-9 pr-4 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0D472C]"
-          />
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+      {!canViewFullList && (
+        <div className="rounded-3xl border-2 border-emerald-600/30 bg-[#E8F3ED] p-6 text-xs text-emerald-950 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] font-bold bg-[#0D472C] text-white px-2 py-0.5 rounded uppercase">
+              Secretario / Encargado de Área
+            </span>
+            <span className="font-bold text-[#0D472C]">Módulo Habilitado para Inscripciones</span>
+          </div>
+          <p className="leading-relaxed">
+            Por política institucional de protección y privacidad de datos de menores, la consulta de la lista completa del padrón está reservada a <strong>Coordinación General y Cargador de Datos</strong>.
+          </p>
+          <p className="leading-relaxed">
+            Puedes dar de alta nuevas inscripciones para las actividades y eventos de tu área haciendo clic en el botón superior o a continuación:
+          </p>
+          <button
+            onClick={onOpenNewKid}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0D472C] px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-[#165B3A] transition cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Completar Ficha de Inscripción con Datos de Evento y Tutor</span>
+          </button>
         </div>
+      )}
+
+      {/* Filter controls & List - only rendered if canViewFullList */}
+      {canViewFullList && (
+        <>
+          <div className="rounded-2xl border border-[#0D472C]/20 bg-white p-4 shadow-xs space-y-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre, apellido, DNI o tutor..."
+                className="w-full rounded-xl border border-gray-300 bg-[#FFFDF8] pl-9 pr-4 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#0D472C]"
+              />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
           <div>
@@ -284,6 +312,8 @@ export const KidsView: React.FC<KidsViewProps> = ({
           );
         })}
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 };

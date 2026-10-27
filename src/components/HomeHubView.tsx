@@ -19,7 +19,8 @@ import {
   Leaf,
   Camera,
   HeartPulse,
-  SendHorizontal
+  SendHorizontal,
+  QrCode
 } from 'lucide-react';
 import { UserProfile, OfficeNotice, OperativeArea } from '../types';
 import { canUserAccessTab } from '../utils/permissions';
@@ -132,6 +133,48 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
       textColor: 'text-white',
       badge: 'Buscador Central',
       visible: canUserAccessTab(currentUser, 'documents'),
+    },
+    {
+      id: 'kids',
+      title: 'Niñez y Adolescencia',
+      description: currentUser.role === 'SECRETARIO'
+        ? 'Inscripción de niños a eventos y actividades específicas del área operativa.'
+        : 'Padrón unificado de participantes, autorizaciones físicas de padres y fichas de salud.',
+      icon: Users,
+      color: 'bg-[#15803D]',
+      textColor: 'text-white',
+      badge: currentUser.role === 'SECRETARIO' ? 'Inscripción a Eventos' : 'Padrón Institucional',
+      visible: canUserAccessTab(currentUser, 'kids'),
+    },
+    {
+      id: 'inventory',
+      title: 'Préstamos con Firma Digital',
+      description: 'Retiro y firma de materiales deportivos, sonido, herramientas y equipamiento con acta.',
+      icon: Package,
+      color: 'bg-[#166534]',
+      textColor: 'text-white',
+      badge: 'Firma Digital',
+      visible: canUserAccessTab(currentUser, 'inventory'),
+    },
+    {
+      id: 'requests',
+      title: 'Pedidos de Materiales',
+      description: 'Gestión y aprobación de solicitudes de insumos y recursos operativos presentadas por las áreas.',
+      icon: SendHorizontal,
+      color: 'bg-[#0F766E]',
+      textColor: 'text-white',
+      badge: 'Insumos & Recursos',
+      visible: canUserAccessTab(currentUser, 'requests'),
+    },
+    {
+      id: 'qr_lookup',
+      title: 'Localizador QR de Estante',
+      description: 'Búsqueda por código QR y visualización de la posición física de cajas y expedientes en baldas.',
+      icon: QrCode,
+      color: 'bg-[#0E7490]',
+      textColor: 'text-white',
+      badge: 'Escaneo Físico',
+      visible: canUserAccessTab(currentUser, 'qr_lookup'),
     },
     {
       id: 'calendar',
