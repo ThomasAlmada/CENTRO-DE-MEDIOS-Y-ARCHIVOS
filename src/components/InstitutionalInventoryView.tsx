@@ -30,6 +30,7 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
   currentUser,
 }) => {
   const isAdmin = currentUser.role === 'ADMIN';
+  const canManage = isAdmin || currentUser.role === 'CARGADOR_DATOS';
 
   const [items, setItems] = useState<InstitutionalInventoryItem[]>(() => 
     StorageService.getInstitutionalInventory()
@@ -100,8 +101,8 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) {
-      showNotification('error', 'Solo el Coordinador General (Admin) puede asentar o modificar inventario.');
+    if (!canManage) {
+      showNotification('error', 'Solo el Coordinador General o el Cargador de Datos pueden asentar o modificar inventario.');
       return;
     }
     if (!articulo.trim()) {
@@ -136,8 +137,8 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
   };
 
   const handleDelete = (item: InstitutionalInventoryItem) => {
-    if (!isAdmin) {
-      showNotification('error', 'Solo el Administrador puede dar de baja inventario.');
+    if (!canManage) {
+      showNotification('error', 'No tiene permisos para dar de baja inventario.');
       return;
     }
     const updated = StorageService.deleteInstitutionalInventoryItem(item.id, currentUser);
@@ -190,7 +191,7 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
             </p>
           </div>
 
-          {isAdmin && !isAddingItem && (
+          {canManage && !isAddingItem && (
             <button
               onClick={() => {
                 resetForm();
@@ -215,7 +216,7 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
       )}
 
       {/* FORM TO INVENTARY A NEW ITEM (EXACT SPECIFICATION) */}
-      {isAddingItem && isAdmin && (
+      {isAddingItem && canManage && (
         <div className="rounded-3xl border-2 border-[#0D472C] bg-[#FFFDF8] p-6 shadow-xl animate-in fade-in">
           <div className="flex items-center justify-between border-b pb-3 mb-4">
             <div className="flex items-center gap-2">
@@ -554,7 +555,7 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
                       {item.estado}
                     </span>
                   </td>
-                  {isAdmin && (
+                  {canManage && (
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button

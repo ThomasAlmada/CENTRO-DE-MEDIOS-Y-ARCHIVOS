@@ -81,6 +81,14 @@ export interface AuditLogEntry {
   details: string;
 }
 
+// BroadcastChannel for cross-tab live synchronization
+const syncChannel = typeof window !== 'undefined' && 'BroadcastChannel' in window 
+  ? new BroadcastChannel('cma_live_sync_v6') 
+  : null;
+
+let syncDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let sseConnection: EventSource | null = null;
+
 export class StorageService {
   private static getItem<T>(key: string, defaultValue: T): T {
     try {
@@ -96,9 +104,101 @@ export class StorageService {
   private static setItem<T>(key: string, value: T): void {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+      // Notify current window
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cma_data_changed', { detail: { key } }));
+      }
+      // Broadcast to other tabs
+      syncChannel?.postMessage({ type: 'DATA_UPDATE', key });
+      // Debounce sync with centralized backend
+      this.triggerServerSync();
     } catch (e) {
       console.error(`Error writing ${key} to storage:`, e);
     }
+  }
+
+  /**
+   * Syncs local storage with the centralized Express server database
+   */
+  static triggerServerSync(): void {
+    if (typeof window === 'undefined') return;
+    if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+    syncDebounceTimer = setTimeout(async () => {
+      try {
+        const fullPayload: Record<string, unknown> = {};
+        Object.entries(STORAGE_KEYS).forEach(([_, storageKey]) => {
+          if (storageKey !== STORAGE_KEYS.ACTIVE_SESSION) {
+            const val = localStorage.getItem(storageKey);
+            if (val) {
+              try { fullPayload[storageKey] = JSON.parse(val); } catch {}
+            }
+          }
+        });
+        await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fullPayload),
+        }).catch(() => {});
+      } catch (e) {
+        // Silent network retry
+      }
+    }, 800);
+  }
+
+  /**
+   * Pulls latest central records from backend on startup or reconnection
+   */
+  static async pullLatestFromServer(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    try {
+      const res = await fetch('/api/sync');
+      if (!res.ok) return false;
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        let changed = false;
+        Object.entries(data).forEach(([key, value]) => {
+          if (key && value && key !== STORAGE_KEYS.ACTIVE_SESSION) {
+            localStorage.setItem(key, JSON.stringify(value));
+            changed = true;
+          }
+        });
+        if (changed) {
+          window.dispatchEvent(new CustomEvent('cma_data_changed', { detail: { source: 'remote' } }));
+        }
+
+        // Establish live push SSE stream across devices if not already active
+        if (!sseConnection && typeof EventSource !== 'undefined') {
+          try {
+            sseConnection = new EventSource('/api/sync/events');
+            sseConnection.onmessage = (event) => {
+              try {
+                const payload = JSON.parse(event.data);
+                if (payload.type === 'SYNC_UPDATE') {
+                  fetch('/api/sync')
+                    .then((r) => r.json())
+                    .then((latest) => {
+                      if (latest && typeof latest === 'object') {
+                        Object.entries(latest).forEach(([k, v]) => {
+                          if (k && v && k !== STORAGE_KEYS.ACTIVE_SESSION) {
+                            localStorage.setItem(k, JSON.stringify(v));
+                          }
+                        });
+                        window.dispatchEvent(new CustomEvent('cma_data_changed', { detail: { source: 'sse' } }));
+                      }
+                    })
+                    .catch(() => {});
+                }
+              } catch {}
+            };
+          } catch {}
+        }
+
+        return true;
+      }
+    } catch (e) {
+      // Backend may be starting or offline
+    }
+    return false;
   }
 
   // ================= USERS & AUTH =================
@@ -600,6 +700,28 @@ export class StorageService {
     const updated = list.map((n) => (n.id === noticeId ? { ...n, activo: !n.activo } : n));
     this.setItem(STORAGE_KEYS.NOTICES, updated);
     this.addAuditLog(user, 'Cambio de Estado de Aviso', `Aviso ${noticeId} alternado`);
+    return updated;
+  }
+
+  static markNoticeAsRead(noticeId: string, user: UserProfile): OfficeNotice[] {
+    const list = this.getNotices();
+    const updated = list.map((n) => {
+      if (n.id !== noticeId) return n;
+      const currentReads = n.leidoPor || [];
+      if (currentReads.some((r) => r.userId === user.id || r.userId === user.username)) {
+        return n; // ya lo leyó
+      }
+      const newRead = {
+        userId: user.id || user.username,
+        userName: user.name,
+        leidoEn: new Date().toISOString(),
+      };
+      return {
+        ...n,
+        leidoPor: [...currentReads, newRead],
+      };
+    });
+    this.setItem(STORAGE_KEYS.NOTICES, updated);
     return updated;
   }
 

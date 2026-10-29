@@ -236,6 +236,12 @@ export interface AreaActa {
   creadaEn: string;
 }
 
+export interface NoticeReadReceipt {
+  userId: string;
+  userName: string;
+  leidoEn: string;
+}
+
 // Admin Notices and Alerts to Users
 export interface OfficeNotice {
   id: string;
@@ -243,6 +249,11 @@ export interface OfficeNotice {
   mensaje: string;
   nivel: 'INFO' | 'IMPORTANTE' | 'URGENTE';
   areaDestino: OperativeArea | 'TODAS';
+  destinatarioTipo?: 'TODOS' | 'AREA' | 'INDIVIDUAL' | 'SELECCIONADOS';
+  destinatariosIds?: string[];
+  destinatariosNombres?: string[];
+  leidoPor?: NoticeReadReceipt[];
+  urgente?: boolean;
   creadoPor: string;
   fecha: string;
   hora: string;

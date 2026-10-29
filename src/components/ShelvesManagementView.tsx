@@ -27,6 +27,7 @@ export const ShelvesManagementView: React.FC<ShelvesManagementViewProps> = ({
   currentUser,
 }) => {
   const isAdmin = currentUser.role === 'ADMIN';
+  const canManage = isAdmin || currentUser.role === 'CARGADOR_DATOS';
 
   const [shelves, setShelves] = useState<OfficeShelf[]>(() => StorageService.getShelves());
   const [editingShelfId, setEditingShelfId] = useState<string | null>(null);
@@ -79,8 +80,8 @@ export const ShelvesManagementView: React.FC<ShelvesManagementViewProps> = ({
 
   const handleSaveShelf = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) {
-      showNotification('error', 'Solo el Coordinador General (Admin) puede modificar o crear estantes.');
+    if (!canManage) {
+      showNotification('error', 'Solo el Coordinador General o el Cargador de Datos pueden modificar o crear estantes.');
       return;
     }
     if (!nombre.trim()) {
@@ -106,8 +107,8 @@ export const ShelvesManagementView: React.FC<ShelvesManagementViewProps> = ({
   };
 
   const handleDeleteShelf = (shelfId: string) => {
-    if (!isAdmin) {
-      showNotification('error', 'Solo el Administrador puede borrar estantes.');
+    if (!canManage) {
+      showNotification('error', 'No tiene permisos para borrar estantes.');
       return;
     }
     const updated = StorageService.deleteShelf(shelfId, currentUser);
@@ -139,7 +140,7 @@ export const ShelvesManagementView: React.FC<ShelvesManagementViewProps> = ({
             </p>
           </div>
 
-          {isAdmin && !isCreatingShelf && (
+          {canManage && !isCreatingShelf && (
             <button
               onClick={() => {
                 resetForm();
@@ -164,7 +165,7 @@ export const ShelvesManagementView: React.FC<ShelvesManagementViewProps> = ({
       )}
 
       {/* FORM: CREATE OR EDIT SHELF */}
-      {isCreatingShelf && isAdmin && (
+      {isCreatingShelf && canManage && (
         <div className="rounded-3xl border-2 border-[#0F766E] bg-[#FFFDF8] p-6 shadow-xl animate-in fade-in">
           <div className="flex items-center justify-between border-b pb-3 mb-4">
             <h3 className="font-archival text-base font-bold text-[#0F766E] flex items-center gap-2">
@@ -356,7 +357,7 @@ export const ShelvesManagementView: React.FC<ShelvesManagementViewProps> = ({
               </div>
             </div>
 
-            {isAdmin && (
+            {canManage && (
               <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
                 <button
                   onClick={() => handleStartEdit(shelf)}

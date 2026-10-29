@@ -63,6 +63,28 @@ export default function App() {
     }
   }, [currentUser, currentTab]);
 
+  // Central server synchronization on mount and event subscription
+  useEffect(() => {
+    StorageService.pullLatestFromServer();
+
+    const refreshData = () => {
+      setDocuments(StorageService.getDocuments());
+      setKids(StorageService.getKids());
+      setInventory(StorageService.getInventory());
+      setLoans(StorageService.getLoans());
+      setRequests(StorageService.getRequests());
+      setBudget(StorageService.getBudget());
+      setEvents(StorageService.getEvents());
+      try {
+        setNotices(StorageService.getNotices());
+      } catch {}
+      setAllUsers(StorageService.getUsers());
+    };
+
+    window.addEventListener('cma_data_changed', refreshData);
+    return () => window.removeEventListener('cma_data_changed', refreshData);
+  }, []);
+
   // Digitize paper modal states
   const [isDigitizeModalOpen, setIsDigitizeModalOpen] = useState(false);
   const [digitizeTargetFolio, setDigitizeTargetFolio] = useState<OfficeFolioCategory>('Actas y reuniones');
@@ -320,6 +342,7 @@ export default function App() {
           setDigitizeTargetFolio('Actas y reuniones');
           setIsDigitizeModalOpen(true);
         }}
+        onNavigateTab={setCurrentTab}
       />
 
       {/* Navigation Tabs */}
