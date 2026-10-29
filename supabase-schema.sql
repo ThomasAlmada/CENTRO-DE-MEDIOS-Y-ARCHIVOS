@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS institutional_inventory (
     id TEXT PRIMARY KEY,
     codigo TEXT UNIQUE NOT NULL,
     articulo TEXT NOT NULL,
+    marca_y_modelo TEXT,
+    accesorios_asociados TEXT,
+    titularidad TEXT DEFAULT 'Propiedad Institucional (Sede)' CHECK (titularidad IN ('Propiedad Institucional (Sede)', 'Material Prestado por Integrante', 'Custodia Temporal (en Tránsito)')),
+    propietario_o_prestador TEXT,
+    responsable_custodia TEXT,
     persona_que_inventaria TEXT NOT NULL,
     dia TEXT NOT NULL,
     fecha DATE NOT NULL,
@@ -83,6 +88,8 @@ CREATE TABLE IF NOT EXISTS material_loans (
     item_nombre TEXT NOT NULL,
     area_operativa TEXT NOT NULL,
     cantidad INTEGER NOT NULL DEFAULT 1,
+    actividad_destino TEXT,
+    accesorios_incluidos TEXT,
     solicitante_nombre TEXT NOT NULL,
     solicitante_dni TEXT NOT NULL,
     solicitante_telefono TEXT,
@@ -90,10 +97,23 @@ CREATE TABLE IF NOT EXISTS material_loans (
     fecha_devolucion_pactada DATE NOT NULL,
     fecha_devolucion_real DATE,
     estado TEXT NOT NULL CHECK (estado IN ('En Curso', 'Devuelto', 'Atrasado')),
+    estado_devolucion_condiciones TEXT,
     firma_retiro_url TEXT NOT NULL,
     firma_devolucion_url TEXT,
     observaciones_salida TEXT,
     observaciones_devolucion TEXT,
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 6.B TABLA DE CUSTODIA DE LLAVES Y SEGURIDAD (SECCIÓN 10)
+CREATE TABLE IF NOT EXISTS key_custody_logs (
+    id TEXT PRIMARY KEY,
+    fecha DATE NOT NULL,
+    hora TIME NOT NULL,
+    responsable_nombre TEXT NOT NULL,
+    accion TEXT NOT NULL,
+    observaciones TEXT,
+    llave_estado TEXT NOT NULL,
     creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -198,7 +218,10 @@ CREATE TABLE IF NOT EXISTS inscription_submissions (
 -- 13. SEEDING INICIAL DE INTEGRANTES OFICIALES
 INSERT INTO users_profiles (id, username, password_pin, name, role, position, telefono, activo)
 VALUES 
-    ('user-admin-almada', '49993070', '49993070', 'Almada Eduardo Thomas', 'ADMIN', 'Coordinador General y Administrador del Centro de Medios y Archivos', '03757-15499930', true),
+    ('user-admin-almada', '49993070', '49993070', 'Almada Eduardo Thomas', 'ADMIN', 'Coordinador General, Desarrollador Web y Administrador del Centro de Medios y Archivos', '03757-15499930', true),
+    ('user-pablo-gonzalez', 'pablo.gonzalez', '1234', 'Pablo González', 'CARGADOR_DATOS', 'Equipo Fundador Centro de Medios y Archivos • Registro y Muebles', '03757-15433211', true),
+    ('user-renzo-vazquez', 'renzo.vazquez', '1234', 'Renzo Vázquez', 'CARGADOR_DATOS', 'Equipo Fundador Centro de Medios y Archivos • Producción Técnica y Audiovisual', '03757-15433212', true),
+    ('user-demian', 'demian', '1234', 'Demian', 'CARGADOR_DATOS', 'Equipo Fundador Centro de Medios y Archivos • Archivo y Custodia de Equipos', '03757-15433213', true),
     ('user-ezequiel-villalba', 'ezequiel.villalba', '1234', 'Ezequiel Villalba', 'CARGADOR_DATOS', 'Coordinador de Deportes y Acción Social', '03757-15421001', true),
     ('user-micaela', 'micaela', '1234', 'Micaela', 'CARGADOR_DATOS', 'Tallerista y Referente de Acción Social', '03757-15421002', true),
     ('user-cami-rodriguez', 'cami.rodriguez', '1234', 'Cami Rodríguez', 'CARGADOR_DATOS', 'Gestión Cultural y Producción de Eventos', '03757-15510203', true),

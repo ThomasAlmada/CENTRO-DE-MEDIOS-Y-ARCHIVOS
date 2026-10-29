@@ -95,7 +95,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       username: cleanUsername,
       passwordPin: passwordPin.trim() || '1234',
       role,
-      assignedArea: role === 'CARGADOR_DATOS' || role === 'SOLICITANTE' ? assignedArea : undefined,
+      assignedArea: role === 'CARGADOR_DATOS' || role === 'SOLICITANTE' || role === 'SECRETARIO' ? assignedArea : undefined,
       position: position.trim() || `Personal de ${assignedArea}`,
       telefono: telefono.trim(),
       activo: true,

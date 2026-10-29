@@ -25,13 +25,37 @@ export const ReturnLoanModal: React.FC<ReturnLoanModalProps> = ({
 
   if (!isOpen || !loan) return null;
 
+  const handleGenerateDigitalSignature = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 100;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#FFFDF8';
+      ctx.fillRect(0, 0, 300, 100);
+      ctx.strokeStyle = '#0D472C';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(4, 4, 292, 92);
+      ctx.fillStyle = '#0D472C';
+      ctx.font = 'italic bold 20px cursive, serif';
+      ctx.fillText(currentUser.name, 20, 42);
+      ctx.fillStyle = '#166534';
+      ctx.font = '10px monospace';
+      ctx.fillText(`DNI: ${currentUser.username} • RECEPCIÓN OFICIAL`, 20, 65);
+      ctx.fillText(new Date().toLocaleDateString('es-AR') + ' - CMA PUERTO ESPERANZA', 20, 80);
+      setFirmaUrl(canvas.toDataURL('image/png'));
+      setErrorMsg('');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firmaUrl) {
-      setErrorMsg('OBLIGATORIO: Se requiere firma digital del receptor de oficina.');
+    let finalFirma = firmaUrl;
+    if (!finalFirma) {
+      handleGenerateDigitalSignature();
       return;
     }
-    onConfirmReturn(loan.id, firmaUrl, observaciones.trim());
+    onConfirmReturn(loan.id, finalFirma, observaciones.trim());
     onClose();
   };
 

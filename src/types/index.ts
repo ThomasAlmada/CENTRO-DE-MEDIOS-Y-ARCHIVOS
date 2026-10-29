@@ -132,6 +132,8 @@ export interface MaterialLoan {
   itemNombre: string;
   areaOperativa: OperativeArea;
   cantidad: number;
+  actividadDestino?: string; // Para qué actividad o producción se retira (Sec. 7.3)
+  accesoriosIncluidos?: string; // e.g. "Cables, baterías, memoria SD 64GB"
   solicitanteNombre: string;
   solicitanteDni: string;
   solicitanteTelefono: string;
@@ -139,6 +141,7 @@ export interface MaterialLoan {
   fechaDevolucionPactada: string;
   fechaDevolucionReal?: string;
   estado: 'En Curso' | 'Devuelto' | 'Atrasado';
+  estadoDevolucionCondiciones?: string; // En qué condiciones regresa
   firmaRetiroUrl: string; // data URL base64
   firmaDevolucionUrl?: string; // data URL base64
   observacionesSalida: string;
@@ -199,11 +202,21 @@ export interface OfficeShelf {
   creadoEn: string;
 }
 
-// Institutional Inventory (Sede Central + Espacio Esperanza Somos Todos)
+export type TitularidadBien = 
+  | 'Propiedad Institucional (Sede)'
+  | 'Material Prestado por Integrante'
+  | 'Custodia Temporal (en Tránsito)';
+
+// Institutional Inventory (Sede Central + Espacio Esperanza Somos Todos + Centro de Medios)
 export interface InstitutionalInventoryItem {
   id: string;
   codigo: string; // e.g. "INV-ESP-2024-001"
   articulo: string;
+  marcaYModelo?: string; // e.g. "Sony A6400 / Micrófono Rode"
+  accesoriosAsociados?: string; // e.g. "Cables, baterías, memoria SD 64GB, bolso"
+  titularidad?: TitularidadBien;
+  propietarioOPrestador?: string; // Si es prestado por un integrante
+  responsableCustodia?: string; // Persona responsable de su resguardo
   personaQueInventaria: string;
   dia: string; // e.g. "Lunes", "Martes"
   fecha: string; // YYYY-MM-DD
@@ -211,11 +224,22 @@ export interface InstitutionalInventoryItem {
   espacioUbicacion: 'SEDE CENTRAL' | 'ESPACIO ESPERANZA SOMOS TODOS' | 'GALPÓN TALLERES' | 'CANCHA / EXTERIOR';
   estanteAsignado?: string;
   areaAsignada: OperativeArea | 'GENERAL INSTITUCIONAL';
-  categoria: 'Deportes' | 'Audio y Tecnología' | 'Mobiliario' | 'Arte y Pinturas' | 'Sanidad y Rescate' | 'Herramientas' | 'Varios';
+  categoria: 'Deportes' | 'Audio y Tecnología' | 'Mobiliario' | 'Arte y Pinturas' | 'Sanidad y Rescate' | 'Herramientas' | 'Cámaras y Prensa' | 'Varios';
   cantidad: number;
   estado: 'Excelente' | 'Bueno' | 'Regular' | 'A Reparar' | 'Baja';
   observaciones: string;
   registradoPorUsuario: string;
+}
+
+// Key Custody and Office Security
+export interface KeyCustodyLog {
+  id: string;
+  fecha: string;
+  hora: string;
+  responsableNombre: string;
+  accion: 'Apertura de Oficina' | 'Cierre y Bloqueo de Oficina' | 'Traspaso de Llave' | 'Revisión de Seguridad y Candados';
+  observaciones: string;
+  llaveEstado: 'En Custodia de Almada' | 'En Custodia de Pablo' | 'En Custodia de Renzo' | 'En Custodia de Demian' | 'En Tablero Seguro';
 }
 
 // Area Actas & Sessions

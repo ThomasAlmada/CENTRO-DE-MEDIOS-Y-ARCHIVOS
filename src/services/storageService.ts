@@ -15,6 +15,7 @@ import {
   OfficeNotice,
   AreaInscriptionForm,
   InscriptionSubmission,
+  KeyCustodyLog,
 } from '../types';
 import {
   INITIAL_DOCUMENTS,
@@ -34,19 +35,20 @@ import {
   INITIAL_INSCRIPTION_SUBMISSIONS,
 } from '../data/mockData';
 
-// Immediate one-time purge of recently loaded data as requested
+// Professional clean wipe of test data as requested:
+// "borra todos los datos que cargue, solo era para probar la app, borra todos los datos y déjala como para que si ya la use profesionalmente"
 if (typeof window !== 'undefined' && window.localStorage) {
   try {
-    if (localStorage.getItem('cma_pe_clean_v6_done') !== 'true') {
+    if (localStorage.getItem('cma_pe_clean_v7_prod') !== 'true') {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.startsWith('cma_pe_') && !k.includes('clean_v6')) {
+        if (k && k.startsWith('cma_pe_') && !k.includes('clean_v7_prod')) {
           keysToRemove.push(k);
         }
       }
       keysToRemove.forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem('cma_pe_clean_v6_done', 'true');
+      localStorage.setItem('cma_pe_clean_v7_prod', 'true');
     }
   } catch (e) {
     console.warn('Storage purge error:', e);
@@ -54,22 +56,23 @@ if (typeof window !== 'undefined' && window.localStorage) {
 }
 
 const STORAGE_KEYS = {
-  DOCUMENTS: 'cma_pe_documents_v6_clean',
-  KIDS: 'cma_pe_kids_v6_clean',
-  INVENTORY: 'cma_pe_inventory_v6_clean',
-  LOANS: 'cma_pe_loans_v6_clean',
-  REQUESTS: 'cma_pe_requests_v6_clean',
-  BUDGET: 'cma_pe_budget_v6_clean',
-  EVENTS: 'cma_pe_events_v6_clean',
-  USERS: 'cma_pe_users_v6_clean',
-  ACTIVE_SESSION: 'cma_pe_session_v6_clean',
-  AUDIT_LOGS: 'cma_pe_audit_v6_clean',
-  SHELVES: 'cma_pe_shelves_v6_clean',
-  INST_INVENTORY: 'cma_pe_inst_inventory_v6_clean',
-  AREA_ACTAS: 'cma_pe_area_actas_v6_clean',
-  NOTICES: 'cma_pe_notices_v6_clean',
-  INSCRIPTION_FORMS: 'cma_pe_insc_forms_v6_clean',
-  INSCRIPTION_SUBS: 'cma_pe_insc_subs_v6_clean',
+  DOCUMENTS: 'cma_pe_documents_v7_prod',
+  KIDS: 'cma_pe_kids_v7_prod',
+  INVENTORY: 'cma_pe_inventory_v7_prod',
+  LOANS: 'cma_pe_loans_v7_prod',
+  REQUESTS: 'cma_pe_requests_v7_prod',
+  BUDGET: 'cma_pe_budget_v7_prod',
+  EVENTS: 'cma_pe_events_v7_prod',
+  USERS: 'cma_pe_users_v7_prod',
+  ACTIVE_SESSION: 'cma_pe_session_v7_prod',
+  AUDIT_LOGS: 'cma_pe_audit_v7_prod',
+  SHELVES: 'cma_pe_shelves_v7_prod',
+  INST_INVENTORY: 'cma_pe_inst_inventory_v7_prod',
+  AREA_ACTAS: 'cma_pe_area_actas_v7_prod',
+  NOTICES: 'cma_pe_notices_v7_prod',
+  INSCRIPTION_FORMS: 'cma_pe_insc_forms_v7_prod',
+  INSCRIPTION_SUBS: 'cma_pe_insc_subs_v7_prod',
+  KEY_CUSTODY: 'cma_pe_key_custody_v7_prod',
 };
 
 export interface AuditLogEntry {
@@ -785,6 +788,29 @@ export class StorageService {
     return updated;
   }
 
+  // ================= KEY CUSTODY & SECURITY (SECTION 10) =================
+  static getKeyCustodyLogs(): KeyCustodyLog[] {
+    return this.getItem<KeyCustodyLog[]>(STORAGE_KEYS.KEY_CUSTODY, [
+      {
+        id: 'key-1',
+        fecha: '2026-10-19',
+        hora: '09:00',
+        responsableNombre: 'Almada Eduardo Thomas',
+        accion: 'Apertura de Oficina',
+        observaciones: 'Apertura inicial y relevamiento de la habitación para el Centro de Medios y Archivos.',
+        llaveEstado: 'En Custodia de Almada',
+      },
+    ]);
+  }
+
+  static saveKeyCustodyLog(log: KeyCustodyLog, user: UserProfile): KeyCustodyLog[] {
+    const list = this.getKeyCustodyLogs();
+    const updated = [log, ...list];
+    this.setItem(STORAGE_KEYS.KEY_CUSTODY, updated);
+    this.addAuditLog(user, 'Seguridad y Llaves', `${log.accion}: ${log.responsableNombre} (${log.llaveEstado})`);
+    return updated;
+  }
+
   // ================= AVAILABLE BALANCE =================
   static getAvailableBalance(): number {
     const records = this.getBudget();
@@ -808,6 +834,7 @@ export class StorageService {
     this.setItem(STORAGE_KEYS.NOTICES, INITIAL_NOTICES);
     this.setItem(STORAGE_KEYS.INSCRIPTION_FORMS, INITIAL_INSCRIPTION_FORMS);
     this.setItem(STORAGE_KEYS.INSCRIPTION_SUBS, INITIAL_INSCRIPTION_SUBMISSIONS);
-    this.addAuditLog(user, 'Reinicio de Base', 'Se cargaron los registros oficiales con equipos de WhatsApp y estantería física');
+    this.setItem(STORAGE_KEYS.KEY_CUSTODY, []);
+    this.addAuditLog(user, 'Reinicio Profesional de Base', 'Base de datos limpia y lista para uso oficial del Centro de Medios y Archivos');
   }
 }

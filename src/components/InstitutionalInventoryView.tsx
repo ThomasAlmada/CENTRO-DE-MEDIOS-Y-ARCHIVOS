@@ -16,9 +16,12 @@ import {
   ShieldCheck, 
   Download,
   Building,
-  Sparkles
+  Sparkles,
+  Camera,
+  Layers,
+  HelpCircle
 } from 'lucide-react';
-import { InstitutionalInventoryItem, UserProfile, OperativeArea } from '../types';
+import { InstitutionalInventoryItem, UserProfile, OperativeArea, TitularidadBien } from '../types';
 import { OPERATIVE_AREAS } from '../data/mockData';
 import { StorageService } from '../services/storageService';
 
@@ -43,10 +46,15 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
   const [searchQuery, setSearchQuery] = useState('');
   const [filterUbicacion, setFilterUbicacion] = useState<string>('TODOS');
   const [filterArea, setFilterArea] = useState<string>('TODAS');
+  const [filterTitularidad, setFilterTitularidad] = useState<string>('TODAS');
 
-  // Form states - Exactly matching user specifications:
-  // "persona que inventaría, fecha y hora, día, articulo, código y cosas necesarias"
+  // Form states - Project Sections 7.3 and 9 specifications:
   const [articulo, setArticulo] = useState('');
+  const [marcaYModelo, setMarcaYModelo] = useState('');
+  const [accesoriosAsociados, setAccesoriosAsociados] = useState('');
+  const [titularidad, setTitularidad] = useState<TitularidadBien>('Propiedad Institucional (Sede)');
+  const [propietarioOPrestador, setPropietarioOPrestador] = useState('');
+  const [responsableCustodia, setResponsableCustodia] = useState(currentUser.name);
   const [codigo, setCodigo] = useState('');
   const [personaQueInventaria, setPersonaQueInventaria] = useState(currentUser.name);
   const [dia, setDia] = useState(() => {
@@ -58,7 +66,7 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
   const [espacioUbicacion, setEspacioUbicacion] = useState<InstitutionalInventoryItem['espacioUbicacion']>('SEDE CENTRAL');
   const [estanteAsignado, setEstanteAsignado] = useState('Estante 1 - Coordinación General y Resoluciones');
   const [areaAsignada, setAreaAsignada] = useState<OperativeArea | 'GENERAL INSTITUCIONAL'>('GENERAL INSTITUCIONAL');
-  const [categoria, setCategoria] = useState<InstitutionalInventoryItem['categoria']>('Varios');
+  const [categoria, setCategoria] = useState<InstitutionalInventoryItem['categoria']>('Audio y Tecnología');
   const [cantidad, setCantidad] = useState(1);
   const [estado, setEstado] = useState<InstitutionalInventoryItem['estado']>('Excelente');
   const [observaciones, setObservaciones] = useState('');
@@ -74,6 +82,11 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
     setIsAddingItem(false);
     setEditingItemId(null);
     setArticulo('');
+    setMarcaYModelo('');
+    setAccesoriosAsociados('');
+    setTitularidad('Propiedad Institucional (Sede)');
+    setPropietarioOPrestador('');
+    setResponsableCustodia(currentUser.name);
     setCodigo('');
     setPersonaQueInventaria(currentUser.name);
     setCantidad(1);
@@ -84,6 +97,11 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
   const handleStartEdit = (item: InstitutionalInventoryItem) => {
     setEditingItemId(item.id);
     setArticulo(item.articulo);
+    setMarcaYModelo(item.marcaYModelo || '');
+    setAccesoriosAsociados(item.accesoriosAsociados || '');
+    setTitularidad(item.titularidad || 'Propiedad Institucional (Sede)');
+    setPropietarioOPrestador(item.propietarioOPrestador || '');
+    setResponsableCustodia(item.responsableCustodia || item.personaQueInventaria || currentUser.name);
     setCodigo(item.codigo);
     setPersonaQueInventaria(item.personaQueInventaria);
     setDia(item.dia);
@@ -116,6 +134,11 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
       id: editingItemId || 'inv-' + Date.now(),
       codigo: cleanCodigo,
       articulo: articulo.trim(),
+      marcaYModelo: marcaYModelo.trim() || undefined,
+      accesoriosAsociados: accesoriosAsociados.trim() || undefined,
+      titularidad,
+      propietarioOPrestador: titularidad === 'Material Prestado por Integrante' ? propietarioOPrestador.trim() : undefined,
+      responsableCustodia: responsableCustodia.trim() || personaQueInventaria.trim(),
       personaQueInventaria: personaQueInventaria.trim() || currentUser.name,
       dia,
       fecha,
@@ -154,28 +177,32 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
       if (filterArea !== 'TODAS' && item.areaAsignada !== filterArea) {
         return false;
       }
+      if (filterTitularidad !== 'TODAS' && item.titularidad !== filterTitularidad) {
+        return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
           item.articulo.toLowerCase().includes(q) ||
           item.codigo.toLowerCase().includes(q) ||
           item.personaQueInventaria.toLowerCase().includes(q) ||
-          item.observaciones.toLowerCase().includes(q)
+          (item.marcaYModelo && item.marcaYModelo.toLowerCase().includes(q)) ||
+          (item.estanteAsignado && item.estanteAsignado.toLowerCase().includes(q))
         );
       }
       return true;
     });
-  }, [items, filterUbicacion, filterArea, searchQuery]);
+  }, [items, filterUbicacion, filterArea, filterTitularidad, searchQuery]);
 
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="rounded-3xl bg-[#0D472C] text-[#F9F6EC] p-6 sm:p-7 shadow-lg border-2 border-emerald-800 relative overflow-hidden">
+      <div className="rounded-3xl bg-[#0D472C] text-[#F9F6EC] p-6 sm:p-7 shadow-lg relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="text-xs font-mono font-bold bg-amber-400 text-gray-950 px-2.5 py-0.5 rounded uppercase">
-                Inventario General Institucional
+                Patrimonio & Medios Audiovisuales
               </span>
               <span className="text-xs text-emerald-200">Puerto Esperanza</span>
               <span className="text-xs bg-emerald-900 px-2.5 py-0.5 rounded border border-emerald-700">
@@ -184,10 +211,10 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
             </div>
 
             <h1 className="font-archival text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
-              Libro de Inventario Patrimonial
+              Libro de Inventario Patrimonial y Medios
             </h1>
             <p className="text-xs text-emerald-100 max-w-xl mt-1.5 leading-relaxed">
-              Registro obligatorio de bienes, mobiliario, sonido, herramientas y equipamiento deportivo. Cada asiento detalla la persona que inventaría, día, fecha y hora, artículo y código.
+              Registro obligatorio de bienes, cámaras, micrófonos, cables, herramientas y equipamiento institucional. Distingue expresamente entre propiedad institucional, materiales prestados por integrantes y custodia temporal.
             </p>
           </div>
 
@@ -215,44 +242,44 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
         </div>
       )}
 
-      {/* FORM TO INVENTARY A NEW ITEM (EXACT SPECIFICATION) */}
+      {/* FORM TO INVENTARY A NEW ITEM (SECTIONS 7.3 & 9 SPECIFICATIONS) */}
       {isAddingItem && canManage && (
         <div className="rounded-3xl border-2 border-[#0D472C] bg-[#FFFDF8] p-6 shadow-xl animate-in fade-in">
           <div className="flex items-center justify-between border-b pb-3 mb-4">
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-[#0D472C]" />
               <h3 className="font-archival text-base font-bold text-[#0D472C]">
-                {editingItemId ? 'Modificar Registro de Inventario' : 'Cargar e Inventariar Objeto en el Centro'}
+                {editingItemId ? 'Modificar Registro de Inventario' : 'Cargar e Inventariar Objeto o Equipo'}
               </h3>
             </div>
             <button
               onClick={resetForm}
-              className="text-xs text-gray-500 hover:text-black font-semibold cursor-pointer underline"
+              className="text-xs text-gray-500 hover:text-black underline cursor-pointer"
             >
               Cancelar
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-            {/* ROW 1: Articulo y Código */}
+            {/* ROW 1: Articulo y Codigo */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               <div className="sm:col-span-2">
-                <label className="block font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Nombre del Artículo / Bien *
+                <label className="block font-bold text-gray-700 uppercase mb-1">
+                  Nombre del Artículo / Objeto *
                 </label>
                 <input
                   type="text"
                   value={articulo}
                   onChange={(e) => setArticulo(e.target.value)}
-                  placeholder="Ej: Consola de Sonido Yamaha / 10 Pelotas de Fútbol N° 5"
+                  placeholder="Ej: Cámara Fotográfica Profesional / Micrófono Corbatero / Trípode"
                   className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-[#0D472C]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Código Único Patrimonial *
+                <label className="block font-bold text-gray-700 uppercase mb-1">
+                  Código de Identificación
                 </label>
                 <input
                   type="text"
@@ -264,7 +291,78 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
               </div>
             </div>
 
-            {/* ROW 2: Persona que inventaría, Día, Fecha y Hora (EXACT SPEC) */}
+            {/* NEW ROW: Marca, Modelo y Accesorios Asociados (Section 7.3 & 9) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-200/80">
+              <div>
+                <label className="block font-bold text-emerald-950 mb-1 flex items-center gap-1">
+                  <Camera className="h-3.5 w-3.5 text-emerald-700" />
+                  <span>Marca y Modelo (cuando corresponda)</span>
+                </label>
+                <input
+                  type="text"
+                  value={marcaYModelo}
+                  onChange={(e) => setMarcaYModelo(e.target.value)}
+                  placeholder="Ej: Sony Alpha 6400 / Shure SM58 / Kingston 64GB"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-emerald-950 mb-1">Accesorios Asociados</label>
+                <input
+                  type="text"
+                  value={accesoriosAsociados}
+                  onChange={(e) => setAccesoriosAsociados(e.target.value)}
+                  placeholder="Ej: Cable HDMI, 2 baterías de repuesto, estuche rígido"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* NEW ROW: Titularidad del Bien (Section 9 Distinction) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200">
+              <div>
+                <label className="block font-bold text-amber-950 mb-1 flex items-center gap-1">
+                  <ShieldCheck className="h-3.5 w-3.5 text-amber-700" />
+                  <span>Titularidad del Bien *</span>
+                </label>
+                <select
+                  value={titularidad}
+                  onChange={(e) => setTitularidad(e.target.value as TitularidadBien)}
+                  className="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold"
+                >
+                  <option value="Propiedad Institucional (Sede)">Propiedad Institucional (Sede)</option>
+                  <option value="Material Prestado por Integrante">Material Prestado por Integrante</option>
+                  <option value="Custodia Temporal (en Tránsito)">Custodia Temporal (en Tránsito)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-amber-950 mb-1">
+                  {titularidad === 'Material Prestado por Integrante' ? 'Dueño / Integrante Prestador *' : 'Titular Registrado'}
+                </label>
+                <input
+                  type="text"
+                  value={propietarioOPrestador}
+                  onChange={(e) => setPropietarioOPrestador(e.target.value)}
+                  placeholder={titularidad === 'Material Prestado por Integrante' ? 'Nombre del integrante dueño' : 'Institucional'}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-amber-950 mb-1">Responsable de su Custodia</label>
+                <input
+                  type="text"
+                  value={responsableCustodia}
+                  onChange={(e) => setResponsableCustodia(e.target.value)}
+                  placeholder="Ej: Almada Eduardo / Renzo Vázquez"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs"
+                />
+              </div>
+            </div>
+
+            {/* ROW 2: Persona que inventaría, Día, Fecha y Hora */}
             <div className="bg-[#FAF7F0] p-4 rounded-2xl border border-gray-200 grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
                 <label className="block font-bold text-[#0D472C] mb-1 flex items-center gap-1">
@@ -385,8 +483,9 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
                   onChange={(e) => setCategoria(e.target.value as any)}
                   className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs"
                 >
-                  <option value="Deportes">Deportes</option>
                   <option value="Audio y Tecnología">Audio y Tecnología</option>
+                  <option value="Cámaras y Prensa">Cámaras y Prensa</option>
+                  <option value="Deportes">Deportes</option>
                   <option value="Mobiliario">Mobiliario</option>
                   <option value="Arte y Pinturas">Arte y Pinturas</option>
                   <option value="Sanidad y Rescate">Sanidad y Rescate</option>
@@ -432,151 +531,174 @@ export const InstitutionalInventoryView: React.FC<InstitutionalInventoryViewProp
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-6 py-2 rounded-xl bg-[#0D472C] hover:bg-[#165B3A] text-white font-bold shadow-md cursor-pointer"
+                className="flex items-center gap-1.5 px-6 py-2 rounded-xl bg-[#0D472C] hover:bg-[#165B3A] text-white font-bold shadow cursor-pointer"
               >
                 <Check className="h-4 w-4" />
-                <span>{editingItemId ? 'Guardar Cambios' : 'Asentar en Inventario'}</span>
+                <span>{editingItemId ? 'Guardar Cambios' : 'Registrar en Inventario Oficial'}</span>
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* SEARCH AND FILTERS */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
-        <div className="relative w-full md:w-80">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por artículo, código o persona..."
-            className="w-full rounded-xl border border-gray-300 bg-[#FFFDF8] pl-9 pr-3 py-2 text-xs focus:ring-2 focus:ring-[#0D472C]"
-          />
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-400" />
+      {/* FILTER BAR */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2.5 grow">
+          <div className="relative grow sm:grow-0 sm:w-64">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por artículo, código, marca..."
+              className="w-full rounded-xl border border-gray-300 pl-8 pr-3 py-1.5 text-xs"
+            />
+            <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-gray-400" />
+          </div>
+
+          <select
+            value={filterUbicacion}
+            onChange={(e) => setFilterUbicacion(e.target.value)}
+            className="rounded-xl border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700"
+          >
+            <option value="TODOS">Todas las Ubicaciones</option>
+            <option value="SEDE CENTRAL">Sede Central</option>
+            <option value="ESPACIO ESPERANZA SOMOS TODOS">Espacio Esperanza</option>
+            <option value="GALPÓN TALLERES">Galpón Talleres</option>
+            <option value="CANCHA / EXTERIOR">Cancha / Exterior</option>
+          </select>
+
+          <select
+            value={filterTitularidad}
+            onChange={(e) => setFilterTitularidad(e.target.value)}
+            className="rounded-xl border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700"
+          >
+            <option value="TODAS">Toda Titularidad</option>
+            <option value="Propiedad Institucional (Sede)">Propiedad Institucional</option>
+            <option value="Material Prestado por Integrante">Prestado por Integrante</option>
+            <option value="Custodia Temporal (en Tránsito)">Custodia Temporal</option>
+          </select>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <div>
-            <select
-              value={filterUbicacion}
-              onChange={(e) => setFilterUbicacion(e.target.value)}
-              className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold"
-            >
-              <option value="TODOS">Todas las Sedes / Espacios</option>
-              <option value="SEDE CENTRAL">SEDE CENTRAL</option>
-              <option value="ESPACIO ESPERANZA SOMOS TODOS">ESPACIO ESPERANZA SOMOS TODOS</option>
-              <option value="GALPÓN TALLERES">GALPÓN TALLERES</option>
-              <option value="CANCHA / EXTERIOR">CANCHA / EXTERIOR</option>
-            </select>
-          </div>
-
-          <div>
-            <select
-              value={filterArea}
-              onChange={(e) => setFilterArea(e.target.value)}
-              className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold"
-            >
-              <option value="TODAS">Todas las Áreas</option>
-              <option value="GENERAL INSTITUCIONAL">GENERAL INSTITUCIONAL</option>
-              {OPERATIVE_AREAS.map((a) => (
-                <option key={a.key} value={a.key}>{a.label}</option>
-              ))}
-            </select>
-          </div>
+        <div className="text-[11px] font-mono text-gray-500 font-bold">
+          Total: {filteredItems.length} artículos
         </div>
       </div>
 
-      {/* INVENTORY ITEMS TABLE / CARDS */}
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-xs">
-        <div className="p-4 border-b bg-[#FAF7F0] flex items-center justify-between">
-          <span className="text-xs font-bold text-[#0D472C] uppercase tracking-wider">
-            Total de Bienes Inventariados: {filteredItems.length} registros
-          </span>
-          <span className="text-[11px] text-gray-500 font-medium">
-            Sede Central + Espacio Esperanza Somos Todos
-          </span>
-        </div>
-
+      {/* INVENTORY TABLE */}
+      <div className="rounded-3xl border border-gray-200 bg-white overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-gray-50 border-b text-gray-600 font-bold uppercase text-[10px]">
+              <tr className="border-b border-gray-200 bg-[#FAF7F0] text-gray-600 font-bold text-[11px] uppercase tracking-wider">
                 <th className="p-3">Código</th>
-                <th className="p-3">Artículo / Bien</th>
+                <th className="p-3">Artículo & Detalles</th>
+                <th className="p-3">Titularidad</th>
                 <th className="p-3">Inventariado Por</th>
-                <th className="p-3">Día, Fecha y Hora</th>
-                <th className="p-3">Sede / Ubicación</th>
-                <th className="p-3">Área Asignada</th>
+                <th className="p-3">Día / Fecha</th>
+                <th className="p-3">Ubicación / Estante</th>
+                <th className="p-3">Área</th>
                 <th className="p-3">Cant.</th>
                 <th className="p-3">Estado</th>
-                {isAdmin && <th className="p-3 text-right">Acciones</th>}
+                {canManage && <th className="p-3 text-right">Acciones</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50 transition">
-                  <td className="p-3 font-mono font-bold text-[#0D472C]">
-                    {item.codigo}
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="p-8 text-center text-gray-400">
+                    <Package className="h-10 w-10 mx-auto text-gray-300 mb-2" />
+                    <span>No hay artículos cargados en el inventario institucional.</span>
                   </td>
-                  <td className="p-3">
-                    <div className="font-bold text-gray-900">{item.articulo}</div>
-                    {item.observaciones && (
-                      <div className="text-[11px] text-gray-500 line-clamp-1">{item.observaciones}</div>
-                    )}
-                  </td>
-                  <td className="p-3 font-semibold text-gray-800">
-                    {item.personaQueInventaria}
-                  </td>
-                  <td className="p-3 font-mono text-[11px] text-gray-600">
-                    <div>{item.dia}, {item.fecha}</div>
-                    <div className="text-gray-400">{item.hora} hs</div>
-                  </td>
-                  <td className="p-3">
-                    <span className="bg-[#E8F3ED] text-[#0D472C] font-semibold text-[10px] px-2 py-0.5 rounded border border-[#0D472C]/20 block w-fit">
-                      {item.espacioUbicacion}
-                    </span>
-                    {item.estanteAsignado && (
-                      <span className="text-[10px] text-gray-400 block mt-0.5">{item.estanteAsignado}</span>
-                    )}
-                  </td>
-                  <td className="p-3 text-[11px] font-medium text-gray-700">
-                    {item.areaAsignada}
-                  </td>
-                  <td className="p-3 font-mono font-black text-gray-900 text-sm">
-                    {item.cantidad}
-                  </td>
-                  <td className="p-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      item.estado === 'Excelente' ? 'bg-emerald-100 text-emerald-800' :
-                      item.estado === 'Bueno' ? 'bg-blue-100 text-blue-800' :
-                      item.estado === 'Regular' ? 'bg-amber-100 text-amber-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {item.estado}
-                    </span>
-                  </td>
-                  {canManage && (
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleStartEdit(item)}
-                          className="p-1.5 text-gray-600 hover:text-[#0D472C] hover:bg-gray-100 rounded-lg cursor-pointer"
-                          title="Editar registro"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                          title="Dar de baja este artículo"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  )}
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50 transition">
+                    <td className="p-3 font-mono font-bold text-[#0D472C]">
+                      {item.codigo}
+                    </td>
+                    <td className="p-3">
+                      <div className="font-bold text-gray-900">{item.articulo}</div>
+                      {item.marcaYModelo && (
+                        <div className="text-[11px] text-emerald-800 font-semibold">{item.marcaYModelo}</div>
+                      )}
+                      {item.accesoriosAsociados && (
+                        <div className="text-[10px] text-gray-500">Accesorios: {item.accesoriosAsociados}</div>
+                      )}
+                      {item.observaciones && (
+                        <div className="text-[10px] text-gray-400 line-clamp-1 italic">{item.observaciones}</div>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded border block w-fit ${
+                        item.titularidad === 'Material Prestado por Integrante'
+                          ? 'bg-amber-50 text-amber-900 border-amber-300'
+                          : item.titularidad === 'Custodia Temporal (en Tránsito)'
+                          ? 'bg-purple-50 text-purple-900 border-purple-300'
+                          : 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                      }`}>
+                        {item.titularidad || 'Propiedad Institucional'}
+                      </span>
+                      {item.propietarioOPrestador && (
+                        <span className="text-[10px] text-gray-500 block mt-0.5">Dueño: {item.propietarioOPrestador}</span>
+                      )}
+                    </td>
+                    <td className="p-3 font-semibold text-gray-800">
+                      <div>{item.personaQueInventaria}</div>
+                      {item.responsableCustodia && item.responsableCustodia !== item.personaQueInventaria && (
+                        <div className="text-[10px] text-gray-400">Custodia: {item.responsableCustodia}</div>
+                      )}
+                    </td>
+                    <td className="p-3 font-mono text-[11px] text-gray-600">
+                      <div>{item.dia}, {item.fecha}</div>
+                      <div className="text-gray-400">{item.hora} hs</div>
+                    </td>
+                    <td className="p-3">
+                      <span className="bg-[#E8F3ED] text-[#0D472C] font-semibold text-[10px] px-2 py-0.5 rounded border border-[#0D472C]/20 block w-fit">
+                        {item.espacioUbicacion}
+                      </span>
+                      {item.estanteAsignado && (
+                        <span className="text-[10px] text-gray-400 block mt-0.5">{item.estanteAsignado}</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-[11px] font-medium text-gray-700">
+                      {item.areaAsignada}
+                    </td>
+                    <td className="p-3 font-mono font-black text-gray-900 text-sm">
+                      {item.cantidad}
+                    </td>
+                    <td className="p-3">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        item.estado === 'Excelente' ? 'bg-emerald-100 text-emerald-800' :
+                        item.estado === 'Bueno' ? 'bg-blue-100 text-blue-800' :
+                        item.estado === 'Regular' ? 'bg-amber-100 text-amber-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {item.estado}
+                      </span>
+                    </td>
+                    {canManage && (
+                      <td className="p-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleStartEdit(item)}
+                            className="p-1.5 text-gray-600 hover:text-[#0D472C] hover:bg-gray-100 rounded-lg cursor-pointer"
+                            title="Editar registro"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="Dar de baja este artículo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

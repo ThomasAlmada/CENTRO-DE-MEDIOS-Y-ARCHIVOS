@@ -33,6 +33,8 @@ export const LoanModal: React.FC<LoanModalProps> = ({
     new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [observacionesSalida, setObservacionesSalida] = useState<string>('');
+  const [actividadDestino, setActividadDestino] = useState<string>('');
+  const [accesoriosIncluidos, setAccesoriosIncluidos] = useState<string>('');
   const [firmaUrl, setFirmaUrl] = useState<string>('');
   const [isSignModalOpen, setIsSignModalOpen] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
@@ -138,6 +140,8 @@ export const LoanModal: React.FC<LoanModalProps> = ({
       fechaPrestamo: new Date().toISOString().split('T')[0],
       fechaDevolucionPactada,
       estado: 'En Curso',
+      actividadDestino: actividadDestino.trim() || observacionesSalida.trim() || undefined,
+      accesoriosIncluidos: accesoriosIncluidos.trim() || undefined,
       firmaRetiroUrl: finalFirmaUrl,
       observacionesSalida: observacionesSalida.trim(),
     };
@@ -349,10 +353,23 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                   type="text"
                   value={observacionesSalida}
                   onChange={(e) => setObservacionesSalida(e.target.value)}
-                  placeholder="Ej: Torneo barrial / Taller de danzas / Jornada Huella Verde"
+                  placeholder="Ej: Torneo barrial / Grabación de entrevista / Jornada"
                   className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#0D472C]"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Accesorios Retirados con el Equipo (Sec. 7.3)
+              </label>
+              <input
+                type="text"
+                value={accesoriosIncluidos}
+                onChange={(e) => setAccesoriosIncluidos(e.target.value)}
+                placeholder="Ej: Trípode, cable HDMI, tarjeta SD 64GB, 2 baterías y bolso"
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#0D472C]"
+              />
             </div>
 
             {/* Digital Signature Box */}

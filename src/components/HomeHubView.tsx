@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Building2, 
   Folder, 
@@ -20,10 +20,14 @@ import {
   Camera,
   HeartPulse,
   SendHorizontal,
-  QrCode
+  QrCode,
+  BookOpen,
+  Key
 } from 'lucide-react';
 import { UserProfile, OfficeNotice, OperativeArea } from '../types';
 import { canUserAccessTab } from '../utils/permissions';
+import { InstitutionalProjectModal } from './InstitutionalProjectModal';
+import { KeyCustodyModal } from './KeyCustodyModal';
 
 interface HomeHubViewProps {
   currentUser: UserProfile;
@@ -38,6 +42,9 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
   onNavigateTab,
   availableBalance,
 }) => {
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isKeyCustodyModalOpen, setIsKeyCustodyModalOpen] = useState(false);
+
   // Filter active notices intended for this user or all
   const activeAlerts = notices.filter((n) => {
     if (!n.activo) return false;
@@ -84,12 +91,12 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
     },
     {
       id: 'institutional_inventory',
-      title: 'Inventario Institucional',
-      description: 'Inventariado completo de Sede Central y Espacio Esperanza Somos Todos (persona, fecha, hora, día, código y artículo).',
+      title: 'Inventario Institucional y Medios',
+      description: 'Inventariado completo de Sede Central y Espacio Esperanza (marca, modelo, accesorios, titularidad institucional vs prestado y responsable).',
       icon: Package,
       color: 'bg-[#166534]',
       textColor: 'text-white',
-      badge: 'Bienes y Equipamiento',
+      badge: 'Patrimonio y Equipos',
       visible: canUserAccessTab(currentUser, 'institutional_inventory'),
     },
     {
@@ -106,8 +113,8 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
       id: 'notices',
       title: 'Avisos y Alertas Institucionales',
       description: currentUser.role === 'ADMIN' 
-        ? 'Enviar alertas, notificaciones y avisos urgentes a las áreas o a toda la oficina.' 
-        : 'Consultar comunicados y avisos oficiales emitidos por Coordinación General.',
+        ? 'Enviar alertas, notificaciones y avisos urgentes a las áreas o a toda la oficina con seguimiento de lectura.' 
+        : 'Consultar comunicados y avisos oficiales emitidos por Coordinación General y confirmar lectura.',
       icon: Bell,
       color: 'bg-amber-600',
       textColor: 'text-white',
@@ -149,7 +156,7 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
     {
       id: 'inventory',
       title: 'Préstamos con Firma Digital',
-      description: 'Retiro y firma de materiales deportivos, sonido, herramientas y equipamiento con acta.',
+      description: 'Retiro y firma de materiales deportivos, sonido, cámaras, micrófonos y herramientas con acta y control de devolución.',
       icon: Package,
       color: 'bg-[#166534]',
       textColor: 'text-white',
@@ -216,7 +223,7 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className="text-xs font-mono font-bold bg-amber-400 text-gray-950 px-2.5 py-0.5 rounded uppercase tracking-wider">
-                Panel de Inicio
+                Panel de Inicio Institucional
               </span>
               <span className="text-xs text-emerald-200">Puerto Esperanza</span>
               <span className="text-xs font-semibold bg-emerald-900 px-2.5 py-0.5 rounded border border-emerald-700">
@@ -230,9 +237,28 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
             <p className="text-xs text-emerald-100 max-w-xl mt-1.5 leading-relaxed">
               Seleccione a continuación el apartado que desea consultar o gestionar. Cada área y usuario cuenta con su espacio reservado de trabajo.
             </p>
+
+            {/* Quick Institutional Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5 mt-4 pt-3 border-t border-emerald-800/80">
+              <button
+                onClick={() => setIsProjectModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-gray-950 px-3.5 py-2 text-xs font-bold shadow-md transition cursor-pointer active:scale-95"
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Proyecto Institucional de la Oficina</span>
+              </button>
+
+              <button
+                onClick={() => setIsKeyCustodyModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-900/90 hover:bg-emerald-800 text-white px-3.5 py-2 text-xs font-bold border border-emerald-700 shadow-xs transition cursor-pointer active:scale-95"
+              >
+                <Key className="h-4 w-4 text-amber-300" />
+                <span>Custodia de Llaves & Accesos</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/20 shrink-0">
+          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/20 shrink-0 self-start md:self-auto">
             <div className="text-right">
               <span className="text-[10px] uppercase font-bold text-emerald-200 block">Tu Usuario</span>
               <span className="font-mono text-sm font-bold text-white">{currentUser.username}</span>
@@ -341,6 +367,19 @@ export const HomeHubView: React.FC<HomeHubViewProps> = ({
             })}
         </div>
       </div>
+
+      {/* Official Project Modal */}
+      <InstitutionalProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => setIsProjectModalOpen(false)}
+      />
+
+      {/* Key Custody Modal */}
+      <KeyCustodyModal
+        isOpen={isKeyCustodyModalOpen}
+        onClose={() => setIsKeyCustodyModalOpen(false)}
+        currentUser={currentUser}
+      />
     </div>
   );
 };
